@@ -1,0 +1,19 @@
+{
+  "name": "星星工作台",
+  "short_name": "星星工作台",
+  "description": "甜蜜的任务管理小助手",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f7f5fa",
+  "theme_color": "#f7f5fa",
+  "icons": [
+    {
+      "src": "apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

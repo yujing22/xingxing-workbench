@@ -1,0 +1,1853 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover,maximum-scale=1.0,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="星星工作台">
+<meta name="theme-color" content="#f7f5fa">
+<meta name="format-detection" content="telephone=no">
+<meta name="apple-touch-fullscreen" content="yes">
+<title>星星工作台</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⭐</text></svg>">
+<style>
+:root{
+  --bg:#f7f5fa;--card:#fff;--sidebar:#fff;
+  --text:#1f2937;--text2:#6b7280;--text3:#9ca3af;
+  --border:#ece8f0;--border2:#ddd6e6;
+  --primary:#ec4899;--primary-bg:#fdf2f8;--primary-hover:#db2777;
+  --success:#10b981;--success-bg:#ecfdf5;
+  --warning:#f59e0b;--warning-bg:#fffbeb;
+  --danger:#ef4444;--danger-bg:#fef2f2;
+  --info:#3b82f6;--info-bg:#eff6ff;
+  --radius:12px;--radius-sm:8px;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --shadow-lg:0 10px 30px rgba(0,0,0,.12);
+  --cat-work:#3b82f6;--cat-personal:#ec4899;--cat-study:#10b981;--cat-health:#f59e0b;--cat-other:#6b7280;--cat-love:#e11d48;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;overflow:hidden}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:inherit;font-size:14px;outline:none}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#94a3b8}
+
+.app{display:flex;height:100vh}
+
+/* ===== Sidebar ===== */
+.sidebar{width:240px;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 0;flex-shrink:0}
+.brand{display:flex;align-items:center;gap:10px;padding:0 24px 20px;border-bottom:1px solid var(--border)}
+.brand-icon{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#fbbf24,#f59e0b);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px}
+.brand-text{font-size:16px;font-weight:600;color:var(--text)}
+.nav{flex:1;padding:16px 12px;display:flex;flex-direction:column;gap:4px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:10px 16px;border-radius:var(--radius-sm);color:var(--text2);font-size:14px;font-weight:500;transition:all .15s;text-align:left;width:100%}
+.nav-item:hover{background:var(--bg);color:var(--text)}
+.nav-item.active{background:var(--primary-bg);color:var(--primary)}
+.nav-item svg{width:18px;height:18px;flex-shrink:0}
+.add-task-btn{margin:0 16px 12px;padding:11px;border-radius:var(--radius-sm);background:var(--primary);color:#fff;font-size:14px;font-weight:500;transition:background .15s;display:flex;align-items:center;justify-content:center;gap:6px}
+.add-task-btn:hover{background:var(--primary-hover)}
+.sidebar-footer{padding:0 16px;border-top:1px solid var(--border);padding-top:12px;display:flex;gap:8px}
+.footer-btn{flex:1;padding:8px;border-radius:var(--radius-sm);font-size:13px;color:var(--text2);border:1px solid var(--border);transition:all .15s}
+.footer-btn:hover{border-color:var(--border2);color:var(--text);background:var(--bg)}
+
+/* ===== Main ===== */
+.main{flex:1;overflow-y:auto;padding:32px 40px}
+.view{display:none;animation:fadeIn .25s ease}
+.view.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.page-title{font-size:22px;font-weight:600;margin-bottom:24px}
+
+/* ===== Dashboard ===== */
+.greeting{font-size:22px;font-weight:600;margin-bottom:4px}
+.greeting-date{font-size:14px;color:var(--text2);margin-bottom:24px}
+.stat-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.stat-card{background:var(--card);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+.stat-card-label{font-size:13px;color:var(--text2);margin-bottom:8px}
+.stat-card-value{font-size:28px;font-weight:700}
+.stat-card-value.today{color:var(--primary)}
+.stat-card-value.pending{color:var(--warning)}
+.stat-card-value.progress{color:var(--info)}
+.stat-card-value.done{color:var(--success)}
+.progress-section{background:var(--card);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);margin-bottom:24px}
+.progress-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.progress-title{font-size:15px;font-weight:600}
+.progress-pct{font-size:14px;font-weight:600;color:var(--primary)}
+.progress-bar{height:8px;background:var(--border);border-radius:4px;overflow:hidden}
+.progress-fill{height:100%;background:var(--primary);border-radius:4px;transition:width .4s ease}
+.dashboard-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.panel{background:var(--card);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+.panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.panel-title{font-size:15px;font-weight:600}
+.panel-link{font-size:13px;color:var(--primary);cursor:pointer}
+.panel-link:hover{text-decoration:underline}
+.upcoming-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.upcoming-item:last-child{border-bottom:none}
+.upcoming-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.upcoming-info{flex:1;min-width:0}
+.upcoming-title{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.upcoming-meta{font-size:12px;color:var(--text2)}
+.upcoming-badges{display:flex;gap:6px;flex-shrink:0}
+.upcoming-actions{display:flex;gap:4px;flex-shrink:0;opacity:0;transition:opacity .15s}
+.upcoming-item:hover .upcoming-actions{opacity:1}
+.upcoming-act-btn{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:all .15s}
+.upcoming-act-btn:hover{background:var(--bg)}
+.upcoming-act-btn.del:hover{background:var(--danger-bg);color:var(--danger)}
+.upcoming-act-btn svg{width:14px;height:14px}
+.panel-add-btn{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--text2);border:1px solid var(--border);transition:all .15s;margin-left:8px}
+.panel-add-btn:hover{background:var(--primary-bg);color:var(--primary);border-color:var(--primary)}
+.panel-add-btn svg{width:16px;height:16px}
+.badge{padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500}
+.badge-cat{color:#fff}
+.badge-pri-high{background:var(--danger-bg);color:var(--danger)}
+.badge-pri-medium{background:var(--warning-bg);color:var(--warning)}
+.badge-pri-low{background:#f0fdfa;color:#14b8a6}
+.empty-state{text-align:center;padding:32px 0;color:var(--text3);font-size:14px}
+
+.cat-bar-row{display:flex;align-items:center;gap:12px;padding:6px 0}
+.cat-bar-label{width:48px;font-size:13px;color:var(--text2);flex-shrink:0}
+.cat-bar-track{flex:1;height:20px;background:var(--bg);border-radius:4px;overflow:hidden}
+.cat-bar-fill{height:100%;border-radius:4px;transition:width .4s ease;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;color:#fff;font-size:11px;font-weight:600;min-width:24px}
+
+/* ===== Calendar ===== */
+.cal-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.cal-nav{display:flex;align-items:center;gap:12px}
+.cal-month{font-size:18px;font-weight:600;min-width:120px;text-align:center}
+.cal-btn{width:32px;height:32px;border-radius:var(--radius-sm);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;transition:all .15s}
+.cal-btn:hover{background:var(--bg);border-color:var(--border2)}
+.cal-today-btn{padding:6px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);font-size:13px;transition:all .15s}
+.cal-today-btn:hover{background:var(--primary-bg);color:var(--primary);border-color:var(--primary)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.cal-head{background:var(--bg);padding:10px;text-align:center;font-size:13px;font-weight:600;color:var(--text2)}
+.cal-day{background:var(--card);min-height:96px;padding:8px;cursor:pointer;transition:background .1s;position:relative}
+.cal-day:hover{background:var(--bg)}
+.cal-day.other-month{background:#fafafa;color:var(--text3)}
+.cal-day.other-month .day-num{color:var(--text3)}
+.cal-day.today{background:var(--primary-bg)}
+.cal-day.today .day-num{color:var(--primary);font-weight:700}
+.cal-day.selected{box-shadow:inset 0 0 0 2px var(--primary)}
+.day-num{font-size:13px;font-weight:500;margin-bottom:4px}
+.day-dots{display:flex;flex-wrap:wrap;gap:3px;align-items:center}
+.dot{width:6px;height:6px;border-radius:50%}
+.day-more{font-size:10px;color:var(--text3)}
+.day-task-label{font-size:11px;padding:1px 4px;border-radius:3px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ===== Task List ===== */
+.task-toolbar{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
+.search-box{flex:1;min-width:200px;position:relative}
+.search-box input{width:100%;padding:9px 12px 9px 36px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;transition:border .15s}
+.search-box input:focus{border-color:var(--primary)}
+.search-box svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text3)}
+.filter-select{padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--card);cursor:pointer;transition:border .15s}
+.filter-select:focus{border-color:var(--primary)}
+.task-table{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.task-row{display:grid;grid-template-columns:36px 1fr 80px 80px 130px 90px 80px;align-items:center;padding:0 16px;border-bottom:1px solid var(--border);transition:background .1s;min-height:52px}
+.task-row:last-child{border-bottom:none}
+.task-row:hover{background:var(--bg)}
+.task-row.completed .task-title{text-decoration:line-through;color:var(--text3)}
+.task-head{font-size:12px;color:var(--text2);font-weight:600;padding:12px 16px;background:var(--bg);border-bottom:1px solid var(--border)}
+.task-checkbox{width:20px;height:20px;border:2px solid var(--border2);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;justify-self:center}
+.task-checkbox:hover{border-color:var(--primary)}
+.task-checkbox.checked{background:var(--success);border-color:var(--success)}
+.task-checkbox.in-progress{border-color:var(--info);background:var(--info-bg)}
+.task-checkbox.in-progress::after{content:'';width:6px;height:6px;border-radius:50%;background:var(--info)}
+.task-checkbox.checked svg{width:12px;height:12px;color:#fff}
+.task-title{font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.task-desc{font-size:12px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.task-actions{display:flex;gap:8px;justify-content:center}
+.task-action-btn{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text2)}
+.task-action-btn:hover{background:var(--bg)}
+.task-action-btn.delete:hover{background:var(--danger-bg);color:var(--danger)}
+.task-action-btn svg{width:15px;height:15px}
+
+/* ===== Stats ===== */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.stats-panel{background:var(--card);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow)}
+.stats-panel-title{font-size:15px;font-weight:600;margin-bottom:20px}
+.donut-wrap{display:flex;align-items:center;justify-content:center;gap:32px}
+.donut{width:140px;height:140px;border-radius:50%;position:relative;display:flex;align-items:center;justify-content:center}
+.donut-hole{position:absolute;width:96px;height:96px;border-radius:50%;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.donut-pct{font-size:26px;font-weight:700;color:var(--primary)}
+.donut-label{font-size:12px;color:var(--text2)}
+.donut-legend{display:flex;flex-direction:column;gap:10px}
+.legend-item{display:flex;align-items:center;gap:8px;font-size:13px}
+.legend-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.legend-val{margin-left:auto;font-weight:600;color:var(--text)}
+.bar-chart{display:flex;flex-direction:column;gap:12px}
+.stats-row{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px}
+.trend-chart{display:flex;align-items:flex-end;justify-content:space-between;height:160px;gap:12px;padding-top:20px}
+.trend-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%}
+.trend-bar{width:100%;max-width:40px;border-radius:6px 6px 0 0;min-height:4px;transition:height .4s ease;position:relative}
+.trend-bar-val{position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:600;color:var(--text2)}
+.trend-bar-label{font-size:12px;color:var(--text2)}
+.stats-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.summary-card{text-align:center;padding:16px;background:var(--bg);border-radius:var(--radius-sm)}
+.summary-val{font-size:24px;font-weight:700;margin-bottom:4px}
+.summary-label{font-size:13px;color:var(--text2)}
+
+/* ===== Archive (已完成存档) ===== */
+.archive-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+.archive-summary-card{background:var(--card);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);text-align:center}
+.archive-summary-val{font-size:28px;font-weight:700;margin-bottom:4px}
+.archive-summary-label{font-size:13px;color:var(--text2)}
+.archive-toolbar{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
+.archive-group{margin-bottom:24px}
+.archive-group-title{font-size:14px;font-weight:600;color:var(--text2);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.archive-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.archive-card{background:var(--card);border-radius:var(--radius-sm);padding:16px;box-shadow:var(--shadow);transition:box-shadow .15s;position:relative}
+.archive-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.archive-card-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}
+.archive-check{width:22px;height:22px;border-radius:6px;background:var(--success);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.archive-check svg{width:14px;height:14px;color:#fff}
+.archive-card-title{font-size:14px;font-weight:500;text-decoration:line-through;color:var(--text3);flex:1;word-break:break-word}
+.archive-card-desc{font-size:12px;color:var(--text3);margin-bottom:10px;padding-left:32px;word-break:break-word}
+.archive-card-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-left:32px}
+.archive-meta-item{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:4px}
+.archive-meta-item svg{width:12px;height:12px}
+.archive-card-actions{position:absolute;top:12px;right:12px;display:flex;gap:4px;opacity:0;transition:opacity .15s}
+.archive-card:hover .archive-card-actions{opacity:1}
+.archive-act-btn{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text2)}
+.archive-act-btn:hover{background:var(--bg)}
+.archive-act-btn.restore:hover{background:var(--info-bg);color:var(--info)}
+.archive-act-btn.del:hover{background:var(--danger-bg);color:var(--danger)}
+.archive-act-btn svg{width:14px;height:14px}
+
+/* ===== Modal ===== */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;display:none;align-items:center;justify-content:center;animation:fadeIn .15s ease}
+.modal-overlay.active{display:flex}
+.modal{background:var(--card);border-radius:var(--radius);width:520px;max-width:90vw;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg)}
+.modal-header{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:1px solid var(--border)}
+.modal-title{font-size:17px;font-weight:600}
+.modal-close{width:32px;height:32px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;color:var(--text2);transition:all .15s}
+.modal-close:hover{background:var(--bg);color:var(--text)}
+.modal-body{padding:24px}
+.form-group{margin-bottom:16px}
+.form-label{display:block;font-size:13px;font-weight:500;margin-bottom:6px;color:var(--text)}
+.form-input{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;transition:border .15s}
+.form-input:focus{border-color:var(--primary)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.modal-footer{display:flex;justify-content:flex-end;gap:12px;padding:16px 24px;border-top:1px solid var(--border)}
+.btn{padding:9px 20px;border-radius:var(--radius-sm);font-size:14px;font-weight:500;transition:all .15s}
+.btn-cancel{background:var(--bg);color:var(--text2)}
+.btn-cancel:hover{background:var(--border)}
+.btn-save{background:var(--primary);color:#fff}
+.btn-save:hover{background:var(--primary-hover)}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-danger:hover{background:#dc2626}
+
+/* ===== Toast ===== */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--text);color:#fff;padding:10px 24px;border-radius:var(--radius-sm);font-size:14px;z-index:2000;transition:transform .3s ease;box-shadow:var(--shadow-lg)}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* ===== Cute Toast (甜蜜弹窗) ===== */
+.cute-toast{
+  position:fixed;bottom:96px;left:50%;
+  transform:translateX(-50%) translateY(16px) scale(.85);
+  background:linear-gradient(135deg,#fb7185,#ec4899);
+  color:#fff;padding:13px 30px;border-radius:50px;
+  font-size:16px;font-weight:600;letter-spacing:.5px;
+  z-index:2100;box-shadow:0 10px 28px rgba(236,72,153,.38),0 0 0 1px rgba(255,255,255,.25) inset;
+  opacity:0;pointer-events:none;white-space:nowrap;
+  transition:transform .38s cubic-bezier(.34,1.56,.64,1),opacity .25s ease;
+}
+.cute-toast.show{transform:translateX(-50%) translateY(0) scale(1);opacity:1}
+.cute-toast::before{content:'💖';margin-right:8px;font-size:14px;display:inline-block;animation:cuteHeart 1.2s ease-in-out infinite}
+@keyframes cuteHeart{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
+
+/* ===== Cloud Sync ===== */
+.sync-bar{display:flex;align-items:center;gap:10px;padding:8px 16px;margin-bottom:20px;border-radius:var(--radius-sm);font-size:13px;transition:background .2s;cursor:pointer}
+.sync-bar.sync-off{background:#f0f9ff;border:1px solid #bae6fd}
+.sync-bar.sync-idle{background:var(--bg)}
+.sync-bar.sync-syncing{background:var(--warning-bg)}
+.sync-bar.sync-success{background:var(--success-bg)}
+.sync-bar.sync-error{background:var(--danger-bg)}
+.sync-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sync-dot.ok{background:var(--success)}
+.sync-dot.err{background:var(--danger)}
+.sync-dot.idle{background:var(--text3)}
+.sync-spinner{width:14px;height:14px;border:2px solid var(--warning);border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.sync-text{flex:1;color:var(--text2)}
+.sync-action{color:var(--primary);font-size:12px;padding:2px 8px}
+
+/* Sync Modal */
+.sync-modal{width:460px;max-width:90vw}
+.sync-modal .modal-body{padding:24px}
+.sync-form-item{margin-bottom:20px}
+.sync-form-label{display:block;font-size:13px;font-weight:500;margin-bottom:6px;color:var(--text)}
+.sync-form-input{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;transition:border .15s}
+.sync-form-input:focus{border-color:var(--primary)}
+.sync-form-hint{font-size:12px;color:var(--text3);margin-top:4px}
+.sync-guide{background:var(--bg);border-radius:var(--radius-sm);padding:16px;margin-top:16px}
+.sync-guide-title{font-size:13px;font-weight:600;margin-bottom:12px}
+.sync-guide-step{display:flex;gap:10px;margin-bottom:10px;font-size:12px;color:var(--text2);line-height:1.5}
+.sync-guide-num{width:20px;height:20px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0}
+
+/* ===== iOS PWA Base ===== */
+html{-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;overscroll-behavior:none}
+input,textarea,select{-webkit-user-select:text;user-select:text}
+.mobile-nav{display:none}
+.fab{display:none}
+.mobile-actions{display:none}
+
+/* ===== Responsive / Mobile ===== */
+@media(max-width:900px){
+  .sidebar{display:none}
+
+  /* Bottom Tab Bar */
+  .mobile-nav{
+    display:flex;
+    position:fixed;
+    bottom:0;left:0;right:0;
+    background:rgba(255,255,255,.92);
+    backdrop-filter:blur(20px) saturate(180%);
+    -webkit-backdrop-filter:blur(20px) saturate(180%);
+    border-top:1px solid var(--border);
+    padding:4px 0 calc(4px + env(safe-area-inset-bottom));
+    z-index:100;
+  }
+  .mobile-nav .nav-item{
+    flex:1;
+    flex-direction:column;
+    gap:2px;
+    padding:6px 0 2px;
+    font-size:10px;
+    border-radius:8px;
+    min-height:48px;
+  }
+  .mobile-nav .nav-item svg{width:24px;height:24px}
+  .mobile-nav .nav-item.active{background:none;color:var(--primary)}
+
+  /* FAB */
+  .fab{
+    display:flex;
+    position:fixed;
+    right:20px;
+    bottom:calc(78px + env(safe-area-inset-bottom));
+    width:52px;height:52px;
+    border-radius:50%;
+    background:linear-gradient(135deg,#fbbf24,#f59e0b);
+    color:#fff;
+    align-items:center;
+    justify-content:center;
+    box-shadow:0 4px 16px rgba(245,158,11,.45);
+    z-index:99;
+    transition:transform .15s;
+  }
+  .fab:active{transform:scale(.88)}
+
+  /* Mobile action bar */
+  .mobile-actions{
+    display:flex;
+    gap:8px;
+    margin-bottom:16px;
+  }
+  .mobile-actions button{
+    flex:1;
+    padding:9px 4px;
+    border-radius:var(--radius-sm);
+    background:var(--bg);
+    font-size:12px;
+    color:var(--text2);
+    border:1px solid var(--border);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:4px;
+  }
+
+  /* Main content area */
+  .main{
+    padding:calc(14px + env(safe-area-inset-top)) 16px calc(92px + env(safe-area-inset-bottom));
+  }
+
+  /* Grids */
+  .stat-cards{grid-template-columns:repeat(2,1fr);gap:10px}
+  .stat-card{padding:14px}
+  .stat-card-value{font-size:22px}
+  .stat-card-label{font-size:12px}
+  .dashboard-grid{grid-template-columns:1fr;gap:16px}
+  .stats-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+  .stats-row{grid-template-columns:1fr;gap:16px}
+  .archive-summary{grid-template-columns:repeat(3,1fr);gap:10px}
+  .archive-summary-card{padding:14px}
+  .archive-summary-val{font-size:22px}
+  .archive-cards{grid-template-columns:1fr}
+
+  /* Typography */
+  .page-title{font-size:18px;margin-bottom:16px}
+  .greeting{font-size:20px}
+  .greeting-date{font-size:13px;margin-bottom:16px}
+
+  /* Calendar */
+  .cal-day{min-height:60px;padding:4px}
+  .day-num{font-size:12px}
+  .day-task-label{font-size:9px;padding:1px 3px}
+  .cal-toolbar{margin-bottom:12px;flex-wrap:wrap;gap:8px}
+  .cal-month{font-size:16px;min-width:90px}
+  .cal-btn{width:36px;height:36px}
+  .cal-today-btn{padding:8px 14px}
+
+  /* Task table -> 3 columns on mobile */
+  .task-row{grid-template-columns:32px 1fr auto;gap:6px;padding:0 12px;min-height:50px}
+  .task-row > :nth-child(3),
+  .task-row > :nth-child(4),
+  .task-row > :nth-child(5),
+  .task-row > :nth-child(6){display:none}
+
+  /* Task toolbar */
+  .task-toolbar{gap:8px}
+  .search-box{min-width:100%;order:0}
+  .filter-select{flex:1;min-width:0;font-size:12px;padding:8px 8px}
+
+  /* Modal -> bottom sheet */
+  .modal-overlay{align-items:flex-end}
+  .modal{
+    width:100%;max-width:100%;
+    border-radius:20px 20px 0 0;
+    max-height:88vh;
+  }
+  .modal-header{
+    border-radius:20px 20px 0 0;
+    padding-top:22px;
+    position:relative;
+  }
+  .modal-header::before{
+    content:'';
+    position:absolute;
+    top:8px;left:50%;
+    transform:translateX(-50%);
+    width:36px;height:4px;
+    border-radius:2px;
+    background:var(--border2);
+  }
+  .sync-modal{width:100%;max-width:100%}
+  .form-row{grid-template-columns:1fr 1fr;gap:8px}
+  .form-row-3{grid-template-columns:1fr}
+  .modal-body{padding:16px}
+  .modal-footer{padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
+
+  /* Touch targets */
+  .task-checkbox{width:24px;height:24px}
+  .cal-btn,.cal-today-btn{min-height:36px}
+  .nav-item{min-height:44px}
+  .btn{padding:11px 20px}
+
+  /* Panels */
+  .panel{padding:16px}
+  .stats-panel{padding:16px}
+
+  /* Toast above bottom bar */
+  .toast{bottom:calc(100px + env(safe-area-inset-bottom))}
+  .cute-toast{bottom:calc(140px + env(safe-area-inset-bottom))}
+
+  /* Donut */
+  .donut{width:120px;height:120px}
+  .donut-hole{width:82px;height:82px}
+  .donut-pct{font-size:22px}
+
+  /* Trend */
+  .trend-chart{height:120px}
+
+  /* Upcoming items */
+  .upcoming-actions{opacity:1}
+
+  /* Archive toolbar */
+  .archive-toolbar{gap:8px}
+
+  /* Progress */
+  .progress-section{padding:16px}
+}
+@media(max-width:400px){
+  .stat-cards{grid-template-columns:1fr 1fr}
+  .form-row{grid-template-columns:1fr}
+  .form-row-3{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">⭐</div>
+      <span class="brand-text">星星工作台</span>
+    </div>
+    <nav class="nav">
+      <button class="nav-item active" data-view="dashboard" onclick="switchView('dashboard')">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v6a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 17a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1v-2zM14 17a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1v-2z"/></svg>
+        <span>工作台</span>
+      </button>
+      <button class="nav-item" data-view="calendar" onclick="switchView('calendar')">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        <span>日历</span>
+      </button>
+      <button class="nav-item" data-view="tasks" onclick="switchView('tasks')">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+        <span>任务列表</span>
+      </button>
+      <button class="nav-item" data-view="stats" onclick="switchView('stats')">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        <span>统计</span>
+      </button>
+      <button class="nav-item" data-view="archive" onclick="switchView('archive')">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7M9 12l2 2 4-4M3 12a9 9 0 1018 0 9 9 0 00-18 0z"/></svg>
+        <span>已完成存档</span>
+      </button>
+    </nav>
+    <button class="add-task-btn" onclick="openModal()">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+      <span>新建任务</span>
+    </button>
+    <div class="sidebar-footer">
+      <button class="footer-btn" onclick="openSyncModal()" title="云同步">☁️ 同步</button>
+      <button class="footer-btn" onclick="exportData()">导出</button>
+      <button class="footer-btn" onclick="document.getElementById('importInput').click()">导入</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="mobile-actions">
+      <button onclick="openSyncModal()">☁️ 同步</button>
+      <button onclick="exportData()">📤 导出</button>
+      <button onclick="document.getElementById('importInput').click()">📥 导入</button>
+    </div>
+    <div id="syncBarContainer"></div>
+    <div id="view-dashboard" class="view active"></div>
+    <div id="view-calendar" class="view"></div>
+    <div id="view-tasks" class="view"></div>
+    <div id="view-stats" class="view"></div>
+    <div id="view-archive" class="view"></div>
+  </main>
+</div>
+
+<nav class="mobile-nav">
+  <button class="nav-item active" data-view="dashboard" onclick="switchView('dashboard')">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v6a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 17a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1v-2zM14 17a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1v-2z"/></svg>
+    <span>工作台</span>
+  </button>
+  <button class="nav-item" data-view="calendar" onclick="switchView('calendar')">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+    <span>日历</span>
+  </button>
+  <button class="nav-item" data-view="tasks" onclick="switchView('tasks')">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+    <span>任务</span>
+  </button>
+  <button class="nav-item" data-view="stats" onclick="switchView('stats')">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+    <span>统计</span>
+  </button>
+  <button class="nav-item" data-view="archive" onclick="switchView('archive')">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7M9 12l2 2 4-4M3 12a9 9 0 1018 0 9 9 0 00-18 0z"/></svg>
+    <span>存档</span>
+  </button>
+</nav>
+<button class="fab" onclick="openModal()" aria-label="新建任务">
+  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" width="24" height="24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+</button>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">新建任务</div>
+      <button class="modal-close" onclick="closeModal()">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">任务标题 <span style="color:var(--danger)">*</span></label>
+        <input type="text" class="form-input" id="f-title" placeholder="输入任务标题" maxlength="100">
+      </div>
+      <div class="form-group">
+        <label class="form-label">描述</label>
+        <textarea class="form-input" id="f-desc" rows="2" placeholder="任务描述（可选）" maxlength="500"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">分类</label>
+          <select class="form-input" id="f-category">
+            <option value="work">工作</option>
+            <option value="personal">个人</option>
+            <option value="study">学习</option>
+            <option value="health">健康</option>
+            <option value="other">其他</option>
+            <option value="love">伟大的爱情</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">优先级</label>
+          <select class="form-input" id="f-priority">
+            <option value="high">高</option>
+            <option value="medium" selected>中</option>
+            <option value="low">低</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">日期 <span style="color:var(--danger)">*</span></label>
+          <input type="date" class="form-input" id="f-date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">状态</label>
+          <select class="form-input" id="f-status">
+            <option value="pending">待办</option>
+            <option value="in-progress">进行中</option>
+            <option value="completed">已完成</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">开始时间</label>
+          <input type="time" class="form-input" id="f-start">
+        </div>
+        <div class="form-group">
+          <label class="form-label">结束时间</label>
+          <input type="time" class="form-input" id="f-end">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" id="btnDelete" style="margin-right:auto;display:none" onclick="deleteCurrentTask()">删除</button>
+      <button class="btn btn-cancel" onclick="closeModal()">取消</button>
+      <button class="btn btn-save" onclick="saveTask()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="cute-toast" id="cuteToast"></div>
+<input type="file" id="importInput" accept=".json" style="display:none">
+
+<!-- Cloud Sync Modal -->
+<div class="modal-overlay" id="syncModalOverlay">
+  <div class="modal sync-modal">
+    <div class="modal-header">
+      <div class="modal-title">☁️ 云同步设置</div>
+      <button class="modal-close" onclick="closeSyncModal()">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="sync-form-item">
+        <label class="sync-form-label">HTTP 触发地址</label>
+        <input type="text" class="sync-form-input" id="sync-url" placeholder="如: https://starschedule-xxxxx.service.tcloudbase.com/taskApi">
+        <div class="sync-form-hint">在云开发控制台 → 云函数 → taskApi → 触发器 中获取</div>
+      </div>
+      <div class="sync-form-item">
+        <label class="sync-form-label">同步密钥</label>
+        <input type="text" class="sync-form-input" id="sync-key" placeholder="与小程序中填写的密钥一致">
+        <div class="sync-form-hint">用于标识你的数据，手机和电脑填同一个密钥即可同步</div>
+      </div>
+      <div class="sync-guide">
+        <div class="sync-guide-title">配置步骤</div>
+        <div class="sync-guide-step"><span class="sync-guide-num">1</span><span>注册微信小程序账号，开通云开发，创建云环境</span></div>
+        <div class="sync-guide-step"><span class="sync-guide-num">2</span><span>在开发者工具中右键 cloudfunctions/taskApi → 上传并部署</span></div>
+        <div class="sync-guide-step"><span class="sync-guide-num">3</span><span>在云开发控制台 → 云函数 → taskApi → 触发器，开启 HTTP 触发</span></div>
+        <div class="sync-guide-step"><span class="sync-guide-num">4</span><span>复制触发地址填入上方，设置同步密钥，保存即可</span></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" id="syncClearBtn" style="margin-right:auto;display:none" onclick="clearCloudData()">清空云端</button>
+      <button class="btn btn-cancel" onclick="closeSyncModal()">取消</button>
+      <button class="btn btn-save" onclick="saveSyncConfig()">保存并同步</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ====== State & Constants ====== */
+const STORAGE_KEY = 'schedule-workbench-v1';
+const CATS = {
+  work:{label:'工作',color:'#3b82f6'},
+  personal:{label:'个人',color:'#ec4899'},
+  study:{label:'学习',color:'#10b981'},
+  health:{label:'健康',color:'#f59e0b'},
+  other:{label:'其他',color:'#6b7280'},
+  love:{label:'伟大的爱情',color:'#e11d48'}
+};
+const PRIS = {
+  high:{label:'高',color:'#ef4444',bg:'#fef2f2'},
+  medium:{label:'中',color:'#f59e0b',bg:'#fffbeb'},
+  low:{label:'低',color:'#14b8a6',bg:'#f0fdfa'}
+};
+const STATS = {
+  pending:{label:'待办',color:'#6b7280'},
+  'in-progress':{label:'进行中',color:'#3b82f6'},
+  completed:{label:'已完成',color:'#10b981'}
+};
+
+const state = {
+  tasks:[],
+  view:'dashboard',
+  calDate:new Date(),
+  selectedDate:null,
+  filters:{status:'all',category:'all',priority:'all',search:''},
+  editingId:null,
+  calDayFilter:null,
+  archiveFilters:{category:'all',search:''}
+};
+
+/* ====== Storage ====== */
+const SYNC_CONFIG_KEY = 'starschedule-cloud-config';
+let cloudSync = {
+  enabled: false,
+  url: '',
+  syncKey: '',
+  state: 'idle', // idle | syncing | success | error
+  pushTimer: null,
+  lastPushAt: 0
+};
+
+function loadTasks(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    state.tasks = raw ? JSON.parse(raw) : [];
+  }catch(e){ state.tasks = []; }
+}
+function saveTasks(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.tasks));
+  _debounceCloudPush();
+}
+
+/* ====== Utilities ====== */
+function uid(){
+  return Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+}
+function dateStr(d){
+  const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function parseDate(s){
+  const [y,m,d] = s.split('-').map(Number);
+  return new Date(y, m-1, d);
+}
+function todayStr(){ return dateStr(new Date()); }
+function greeting(){
+  const h = new Date().getHours();
+  if(h<6) return '凌晨好';
+  if(h<9) return '早上好';
+  if(h<12) return '上午好';
+  if(h<14) return '中午好';
+  if(h<18) return '下午好';
+  if(h<22) return '晚上好';
+  return '夜深了';
+}
+function weekdayName(d){
+  return ['日','一','二','三','四','五','六'][d.getDay()];
+}
+function relativeDate(s){
+  const today = todayStr();
+  const tomorrow = dateStr(new Date(Date.now()+86400000));
+  const afterTomorrow = dateStr(new Date(Date.now()+172800000));
+  if(s===today) return '今天';
+  if(s===tomorrow) return '明天';
+  if(s===afterTomorrow) return '后天';
+  const d = parseDate(s);
+  return `${d.getMonth()+1}月${d.getDate()}日`;
+}
+function fmtTime(t){
+  if(!t) return '';
+  return t;
+}
+function escapeHtml(s){
+  if(!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function showToast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._timer);
+  el._timer = setTimeout(()=>el.classList.remove('show'), 2200);
+}
+
+/* ====== Cute Toast Queue (甜蜜弹窗队列) ====== */
+const _cuteQueue = [];
+let _cuteShowing = false;
+function showCuteToast(msg){
+  _cuteQueue.push(msg);
+  if(!_cuteShowing) _cuteNext();
+}
+function _cuteNext(){
+  if(_cuteQueue.length===0){ _cuteShowing=false; return; }
+  _cuteShowing = true;
+  const el = document.getElementById('cuteToast');
+  el.textContent = _cuteQueue.shift();
+  el.classList.add('show');
+  clearTimeout(el._timer);
+  el._timer = setTimeout(()=>{
+    el.classList.remove('show');
+    setTimeout(_cuteNext, 260);
+  }, 2200);
+}
+function cuteToastsForCreate(category){
+  const list = [];
+  if(category==='love') list.push('亲哭你');
+  else if(category==='health') list.push('宝贝一定寿比南山');
+  else if(category==='other') list.push('星星能有什么坏心思呢');
+  list.push('宝贝辛苦了，回家亲亲你');
+  return list;
+}
+
+/* ====== Data Queries ====== */
+function getTasksByDate(s){
+  return state.tasks.filter(t=>t.date===s);
+}
+function getTodayTasks(){
+  return getTasksByDate(todayStr());
+}
+function getUpcomingTasks(n){
+  const today = todayStr();
+  return state.tasks
+    .filter(t=>t.date>=today && t.status!=='completed')
+    .sort((a,b)=>{
+      if(a.date!==b.date) return a.date.localeCompare(b.date);
+      const pa = {high:0,medium:1,low:2}[a.priority];
+      const pb = {high:0,medium:1,low:2}[b.priority];
+      return pa-pb;
+    })
+    .slice(0, n);
+}
+function getFilteredTasks(){
+  const f = state.filters;
+  return state.tasks
+    .filter(t=>{
+      if(f.status!=='all' && t.status!==f.status) return false;
+      if(f.category!=='all' && t.category!==f.category) return false;
+      if(f.priority!=='all' && t.priority!==f.priority) return false;
+      if(f.search){
+        const q = f.search.toLowerCase();
+        if(!t.title.toLowerCase().includes(q) && !(t.description||'').toLowerCase().includes(q)) return false;
+      }
+      if(state.calDayFilter && t.date!==state.calDayFilter) return false;
+      return true;
+    })
+    .sort((a,b)=>{
+      if(a.date!==b.date) return a.date.localeCompare(b.date);
+      if(a.startTime && b.startTime) return a.startTime.localeCompare(b.startTime);
+      return 0;
+    });
+}
+
+/* ====== View Switching ====== */
+function switchView(view){
+  state.view = view;
+  document.querySelectorAll('.nav-item').forEach(b=>{
+    b.classList.toggle('active', b.dataset.view===view);
+  });
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+view).classList.add('active');
+  render();
+}
+
+/* ====== Render: Dashboard ====== */
+function renderDashboard(){
+  const today = getTodayTasks();
+  const pending = today.filter(t=>t.status==='pending');
+  const inProg = today.filter(t=>t.status==='in-progress');
+  const done = today.filter(t=>t.status==='completed');
+  const total = today.length;
+  const pct = total>0 ? Math.round(done.length/total*100) : 0;
+  const upcoming = getUpcomingTasks(6);
+
+  // Week category stats
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+  const weekStartStr = dateStr(weekStart);
+  const weekTasks = state.tasks.filter(t=>t.date>=weekStartStr);
+  const catCounts = {};
+  Object.keys(CATS).forEach(k=>catCounts[k]=0);
+  weekTasks.forEach(t=>{ if(catCounts[t.category]!==undefined) catCounts[t.category]++; });
+  const maxCat = Math.max(1, ...Object.values(catCounts));
+
+  const now = new Date();
+  const dateText = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 星期${weekdayName(now)}`;
+
+  document.getElementById('view-dashboard').innerHTML = `
+    <div class="greeting">${greeting()}！</div>
+    <div class="greeting-date">今天是 ${dateText}</div>
+    <div class="stat-cards">
+      <div class="stat-card">
+        <div class="stat-card-label">今日任务</div>
+        <div class="stat-card-value today">${total}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">待办</div>
+        <div class="stat-card-value pending">${pending.length}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">进行中</div>
+        <div class="stat-card-value progress">${inProg.length}</div>
+      </div>
+      <div class="stat-card" style="cursor:pointer" onclick="switchView('archive')">
+        <div class="stat-card-label">已完成</div>
+        <div class="stat-card-value done">${done.length}</div>
+      </div>
+    </div>
+    <div class="progress-section">
+      <div class="progress-header">
+        <div class="progress-title">今日完成进度</div>
+        <div class="progress-pct">${pct}%</div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+    </div>
+    <div class="dashboard-grid">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">即将到来</div>
+          <div style="display:flex;align-items:center">
+            <button class="panel-add-btn" onclick="openModal()" title="新建任务">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+            </button>
+            <div class="panel-link" onclick="switchView('tasks')">查看全部</div>
+          </div>
+        </div>
+        ${upcoming.length===0 ? '<div class="empty-state">暂无即将到来的任务</div>' :
+          upcoming.map(t=>{
+            const cat = CATS[t.category];
+            const pri = PRIS[t.priority];
+            const timeStr = t.startTime ? `${t.startTime}${t.endTime?'-'+t.endTime:''}` : '全天';
+            return `<div class="upcoming-item">
+              <div class="upcoming-dot" style="background:${cat.color}"></div>
+              <div class="upcoming-info">
+                <div class="upcoming-title">${escapeHtml(t.title)}</div>
+                <div class="upcoming-meta">${relativeDate(t.date)} · ${timeStr}</div>
+              </div>
+              <div class="upcoming-badges">
+                <span class="badge badge-cat" style="background:${cat.color}">${cat.label}</span>
+                <span class="badge badge-pri-${t.priority}">${pri.label}</span>
+              </div>
+              <div class="upcoming-actions">
+                <button class="upcoming-act-btn" onclick="openModal('${t.id}')" title="编辑">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                </button>
+                <button class="upcoming-act-btn del" onclick="deleteTask('${t.id}')" title="删除">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"/></svg>
+                </button>
+              </div>
+            </div>`;
+          }).join('')
+        }
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">本周分类</div>
+          <div class="panel-link" onclick="switchView('stats')">详细统计</div>
+        </div>
+        ${weekTasks.length===0 ? '<div class="empty-state">本周暂无任务</div>' :
+          Object.entries(CATS).map(([key,cat])=>{
+            const count = catCounts[key];
+            if(count===0) return '';
+            return `<div class="cat-bar-row">
+              <div class="cat-bar-label">${cat.label}</div>
+              <div class="cat-bar-track">
+                <div class="cat-bar-fill" style="width:${count/maxCat*100}%;background:${cat.color}">${count}</div>
+              </div>
+            </div>`;
+          }).join('')
+        }
+      </div>
+    </div>
+  `;
+}
+
+/* ====== Render: Calendar ====== */
+function renderCalendar(){
+  const d = state.calDate;
+  const year = d.getFullYear();
+  const month = d.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const startOffset = firstDay.getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const today = todayStr();
+  const monthLabel = `${year}年${month+1}月`;
+
+  const weekdays = ['日','一','二','三','四','五','六'];
+  let cells = '';
+
+  // Prev month trailing days
+  const prevMonthDays = new Date(year, month, 0).getDate();
+  for(let i=startOffset-1; i>=0; i--){
+    cells += `<div class="cal-day other-month"><div class="day-num">${prevMonthDays-i}</div></div>`;
+  }
+
+  // Current month days
+  for(let day=1; day<=daysInMonth; day++){
+    const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const dayTasks = getTasksByDate(ds);
+    const isToday = ds===today;
+    const isSelected = ds===state.selectedDate;
+    cells += `<div class="cal-day ${isToday?'today':''} ${isSelected?'selected':''}" onclick="onCalDayClick('${ds}')">
+      <div class="day-num">${day}</div>
+      <div class="day-dots">
+        ${dayTasks.slice(0,3).map(t=>{
+          const cat = CATS[t.category];
+          const done = t.status==='completed';
+          return `<div class="day-task-label" style="background:${cat.color}20;color:${cat.color};text-decoration:${done?'line-through':'none'};opacity:${done?0.6:1}">${escapeHtml(t.title)}</div>`;
+        }).join('')}
+        ${dayTasks.length>3 ? `<span class="day-more">+${dayTasks.length-3} 更多</span>` : ''}
+      </div>
+    </div>`;
+  }
+
+  // Next month leading days
+  const totalCells = startOffset + daysInMonth;
+  const remaining = (7 - totalCells % 7) % 7;
+  for(let i=1; i<=remaining; i++){
+    cells += `<div class="cal-day other-month"><div class="day-num">${i}</div></div>`;
+  }
+
+  document.getElementById('view-calendar').innerHTML = `
+    <div class="cal-toolbar">
+      <div class="cal-nav">
+        <button class="cal-btn" onclick="calPrev()">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+        </button>
+        <div class="cal-month">${monthLabel}</div>
+        <button class="cal-btn" onclick="calNext()">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+        </button>
+        <button class="cal-today-btn" onclick="calToday()">今天</button>
+      </div>
+      <button class="cal-today-btn" onclick="openModal(null,'${today}')">+ 添加今日任务</button>
+    </div>
+    <div class="cal-grid">
+      ${weekdays.map(w=>`<div class="cal-head">${w}</div>`).join('')}
+      ${cells}
+    </div>
+  `;
+}
+function calPrev(){
+  state.calDate = new Date(state.calDate.getFullYear(), state.calDate.getMonth()-1, 1);
+  renderCalendar();
+}
+function calNext(){
+  state.calDate = new Date(state.calDate.getFullYear(), state.calDate.getMonth()+1, 1);
+  renderCalendar();
+}
+function calToday(){
+  state.calDate = new Date();
+  renderCalendar();
+}
+function onCalDayClick(ds){
+  state.selectedDate = ds;
+  state.calDayFilter = ds;
+  switchView('tasks');
+  // Update filter display
+  const sel = document.getElementById('filter-date');
+  if(sel){
+    sel.value = ds;
+    sel.style.color = 'var(--primary)';
+  }
+}
+
+/* ====== Render: Task List ====== */
+function renderTasks(){
+  const tasks = getFilteredTasks();
+  const f = state.filters;
+
+  document.getElementById('view-tasks').innerHTML = `
+    <div class="page-title">
+      ${state.calDayFilter ? `${relativeDate(state.calDayFilter)}的任务` : '任务列表'}
+      ${state.calDayFilter ? `<span style="font-size:14px;color:var(--text2);font-weight:400;margin-left:8px;cursor:pointer" onclick="clearDateFilter()">× 清除日期筛选</span>` : ''}
+    </div>
+    <div class="task-toolbar">
+      <div class="search-box">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <input type="text" placeholder="搜索任务..." value="${escapeHtml(f.search)}" oninput="onSearch(this.value)">
+      </div>
+      <select class="filter-select" onchange="onFilter('status',this.value)">
+        <option value="all" ${f.status==='all'?'selected':''}>全部状态</option>
+        <option value="pending" ${f.status==='pending'?'selected':''}>待办</option>
+        <option value="in-progress" ${f.status==='in-progress'?'selected':''}>进行中</option>
+        <option value="completed" ${f.status==='completed'?'selected':''}>已完成</option>
+      </select>
+      <select class="filter-select" onchange="onFilter('category',this.value)">
+        <option value="all" ${f.category==='all'?'selected':''}>全部分类</option>
+        ${Object.entries(CATS).map(([k,v])=>`<option value="${k}" ${f.category===k?'selected':''}>${v.label}</option>`).join('')}
+      </select>
+      <select class="filter-select" onchange="onFilter('priority',this.value)">
+        <option value="all" ${f.priority==='all'?'selected':''}>全部优先级</option>
+        ${Object.entries(PRIS).map(([k,v])=>`<option value="${k}" ${f.priority===k?'selected':''}>${v.label}</option>`).join('')}
+      </select>
+    </div>
+    <div class="task-table">
+      <div class="task-row">
+        <div class="task-head" style="text-align:center">状态</div>
+        <div class="task-head">任务</div>
+        <div class="task-head">分类</div>
+        <div class="task-head">优先级</div>
+        <div class="task-head">日期</div>
+        <div class="task-head">时间</div>
+        <div class="task-head" style="text-align:center">操作</div>
+      </div>
+      ${tasks.length===0 ? `<div class="empty-state" style="padding:48px">暂无符合条件的任务</div>` :
+        tasks.map(t=>{
+          const cat = CATS[t.category];
+          const pri = PRIS[t.priority];
+          const stLabel = STATS[t.status];
+          const isChecked = t.status==='completed';
+          const isInProg = t.status==='in-progress';
+          return `<div class="task-row ${isChecked?'completed':''}">
+            <div class="task-checkbox ${isChecked?'checked':''} ${isInProg?'in-progress':''}" onclick="cycleStatus('${t.id}')" title="${stLabel.label}">
+              ${isChecked ? '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>' : ''}
+            </div>
+            <div>
+              <div class="task-title">${escapeHtml(t.title)}</div>
+              ${t.description ? `<div class="task-desc">${escapeHtml(t.description)}</div>` : ''}
+            </div>
+            <div><span class="badge badge-cat" style="background:${cat.color}">${cat.label}</span></div>
+            <div><span class="badge badge-pri-${t.priority}">${pri.label}</span></div>
+            <div style="font-size:13px;color:var(--text2)">${relativeDate(t.date)}</div>
+            <div style="font-size:13px;color:var(--text2)">${t.startTime ? t.startTime + (t.endTime ? '-'+t.endTime : '') : '全天'}</div>
+            <div class="task-actions">
+              <button class="task-action-btn" onclick="openModal('${t.id}')" title="编辑">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+              </button>
+              <button class="task-action-btn delete" onclick="deleteTask('${t.id}')" title="删除">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"/></svg>
+              </button>
+            </div>
+          </div>`;
+        }).join('')
+      }
+    </div>
+  `;
+}
+
+function onSearch(v){
+  state.filters.search = v;
+  renderTasks();
+  // Restore focus
+  const inp = document.querySelector('.search-box input');
+  if(inp){ inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+}
+function onFilter(key, val){
+  state.filters[key] = val;
+  renderTasks();
+}
+function clearDateFilter(){
+  state.calDayFilter = null;
+  state.selectedDate = null;
+  renderTasks();
+}
+
+/* ====== Render: Stats ====== */
+function renderStats(){
+  const tasks = state.tasks;
+  const total = tasks.length;
+  const completed = tasks.filter(t=>t.status==='completed').length;
+  const pending = tasks.filter(t=>t.status==='pending').length;
+  const inProg = tasks.filter(t=>t.status==='in-progress').length;
+  const pct = total>0 ? Math.round(completed/total*100) : 0;
+
+  // Category distribution
+  const catStats = {};
+  Object.keys(CATS).forEach(k=>catStats[k]=0);
+  tasks.forEach(t=>{ if(catStats[t.category]!==undefined) catStats[t.category]++; });
+  const maxCat = Math.max(1, ...Object.values(catStats));
+
+  // Priority distribution
+  const priStats = {};
+  Object.keys(PRIS).forEach(k=>priStats[k]=0);
+  tasks.forEach(t=>{ if(priStats[t.priority]!==undefined) priStats[t.priority]++; });
+  const maxPri = Math.max(1, ...Object.values(priStats));
+
+  // 7-day trend
+  const trend = [];
+  for(let i=6; i>=0; i--){
+    const d = new Date(Date.now() - i*86400000);
+    const ds = dateStr(d);
+    const count = tasks.filter(t=>t.date===ds).length;
+    trend.push({label:['日','一','二','三','四','五','六'][d.getDay()], count, isToday:i===0});
+  }
+  const maxTrend = Math.max(1, ...trend.map(t=>t.count));
+
+  document.getElementById('view-stats').innerHTML = `
+    <div class="page-title">统计概览</div>
+    <div class="stats-summary" style="margin-bottom:24px">
+      <div class="summary-card">
+        <div class="summary-val" style="color:var(--text)">${total}</div>
+        <div class="summary-label">总任务数</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-val" style="color:var(--success)">${completed}</div>
+        <div class="summary-label">已完成</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-val" style="color:var(--primary)">${pct}%</div>
+        <div class="summary-label">完成率</div>
+      </div>
+    </div>
+    <div class="stats-row">
+      <div class="stats-panel">
+        <div class="stats-panel-title">完成率</div>
+        <div class="donut-wrap">
+          <div class="donut" style="background:conic-gradient(var(--primary) 0% ${pct}%, #ece8f0 ${pct}% 100%)">
+            <div class="donut-hole">
+              <div class="donut-pct">${pct}%</div>
+              <div class="donut-label">已完成</div>
+            </div>
+          </div>
+          <div class="donut-legend">
+            <div class="legend-item"><span class="legend-dot" style="background:var(--primary)"></span>已完成<span class="legend-val">${completed}</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background:#ece8f0"></span>未完成<span class="legend-val">${total-completed}</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="stats-panel">
+        <div class="stats-panel-title">近 7 天任务趋势</div>
+        <div class="trend-chart">
+          ${trend.map(t=>`
+            <div class="trend-bar-wrap">
+              <div class="trend-bar" style="height:${t.count/maxTrend*100}%;background:${t.isToday?'var(--primary)':'#fbcfe8'}">
+                ${t.count>0 ? `<span class="trend-bar-val">${t.count}</span>` : ''}
+              </div>
+              <div class="trend-bar-label">${t.label}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="stats-row">
+      <div class="stats-panel">
+        <div class="stats-panel-title">分类分布</div>
+        <div class="bar-chart">
+          ${Object.entries(CATS).map(([k,v])=>{
+            const count = catStats[k];
+            return `<div class="cat-bar-row">
+              <div class="cat-bar-label">${v.label}</div>
+              <div class="cat-bar-track">
+                <div class="cat-bar-fill" style="width:${count/maxCat*100}%;background:${v.color}">${count>0?count:''}</div>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+      <div class="stats-panel">
+        <div class="stats-panel-title">优先级分布</div>
+        <div class="bar-chart">
+          ${Object.entries(PRIS).map(([k,v])=>{
+            const count = priStats[k];
+            return `<div class="cat-bar-row">
+              <div class="cat-bar-label">${v.label}</div>
+              <div class="cat-bar-track">
+                <div class="cat-bar-fill" style="width:${count/maxPri*100}%;background:${v.color}">${count>0?count:''}</div>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/* ====== Render: Archive (已完成存档) ====== */
+function getCompletedTasks(){
+  const f = state.archiveFilters;
+  return state.tasks
+    .filter(t=>t.status==='completed')
+    .filter(t=>{
+      if(f.category!=='all' && t.category!==f.category) return false;
+      if(f.search){
+        const q = f.search.toLowerCase();
+        if(!t.title.toLowerCase().includes(q) && !(t.description||'').toLowerCase().includes(q)) return false;
+      }
+      return true;
+    })
+    .sort((a,b)=>{
+      const da = a.completedAt || a.date;
+      const db = b.completedAt || b.date;
+      return db.localeCompare(da);
+    });
+}
+function renderArchive(){
+  const completed = state.tasks.filter(t=>t.status==='completed');
+  const filtered = getCompletedTasks();
+  const f = state.archiveFilters;
+
+  // Stats
+  const now = new Date();
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - now.getDay());
+  weekStart.setHours(0,0,0,0);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const weekCount = completed.filter(t=>{
+    const d = t.completedAt ? new Date(t.completedAt) : new Date(t.date);
+    return d >= weekStart;
+  }).length;
+  const monthCount = completed.filter(t=>{
+    const d = t.completedAt ? new Date(t.completedAt) : new Date(t.date);
+    return d >= monthStart;
+  }).length;
+
+  // Group by completion period
+  const groups = {};
+  filtered.forEach(t=>{
+    let groupKey;
+    let groupLabel;
+    const compDate = t.completedAt ? new Date(t.completedAt) : parseDate(t.date);
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const compDay = new Date(compDate);
+    compDay.setHours(0,0,0,0);
+    const diffDays = Math.floor((today - compDay) / 86400000);
+
+    if(diffDays === 0){ groupKey='today'; groupLabel='今天完成'; }
+    else if(diffDays === 1){ groupKey='yesterday'; groupLabel='昨天完成'; }
+    else if(diffDays > 1 && diffDays <= 7){ groupKey='week'; groupLabel='本周早些时候'; }
+    else if(diffDays > 7 && diffDays <= 30){ groupKey='month'; groupLabel='本月更早'; }
+    else { groupKey='older'; groupLabel='更早'; }
+
+    if(!groups[groupKey]) groups[groupKey] = {label:groupLabel, items:[]};
+    groups[groupKey].items.push(t);
+  });
+
+  const groupOrder = ['today','yesterday','week','month','older'];
+
+  document.getElementById('view-archive').innerHTML = `
+    <div class="page-title">已完成存档</div>
+    <div class="archive-summary">
+      <div class="archive-summary-card">
+        <div class="archive-summary-val" style="color:var(--success)">${completed.length}</div>
+        <div class="archive-summary-label">累计完成</div>
+      </div>
+      <div class="archive-summary-card">
+        <div class="archive-summary-val" style="color:var(--info)">${weekCount}</div>
+        <div class="archive-summary-label">本周完成</div>
+      </div>
+      <div class="archive-summary-card">
+        <div class="archive-summary-val" style="color:var(--primary)">${monthCount}</div>
+        <div class="archive-summary-label">本月完成</div>
+      </div>
+    </div>
+    <div class="archive-toolbar">
+      <div class="search-box" style="flex:1;min-width:200px">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <input type="text" placeholder="搜索已完成任务..." value="${escapeHtml(f.search)}" oninput="onArchiveSearch(this.value)">
+      </div>
+      <select class="filter-select" onchange="onArchiveFilter('category',this.value)">
+        <option value="all" ${f.category==='all'?'selected':''}>全部分类</option>
+        ${Object.entries(CATS).map(([k,v])=>`<option value="${k}" ${f.category===k?'selected':''}>${v.label}</option>`).join('')}
+      </select>
+      <button class="footer-btn" style="padding:8px 16px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;color:var(--text2);cursor:pointer;transition:all .15s" onclick="exportCompleted()">导出已完成</button>
+    </div>
+    ${filtered.length===0 ?
+      '<div class="empty-state" style="padding:64px 0">还没有已完成的任务<br><span style="font-size:12px">在任务列表中点击状态框标记完成后，会自动归档到这里</span></div>' :
+      groupOrder.filter(k=>groups[k]).map(k=>{
+        const g = groups[k];
+        return `<div class="archive-group">
+          <div class="archive-group-title">${g.label}（${g.items.length}）</div>
+          <div class="archive-cards">
+            ${g.items.map(t=>{
+              const cat = CATS[t.category];
+              const pri = PRIS[t.priority];
+              const compTime = t.completedAt ? new Date(t.completedAt) : null;
+              const compTimeStr = compTime ?
+                `${compTime.getMonth()+1}月${compTime.getDate()}日 ${String(compTime.getHours()).padStart(2,'0')}:${String(compTime.getMinutes()).padStart(2,'0')}` :
+                relativeDate(t.date);
+              return `<div class="archive-card">
+                <div class="archive-card-top">
+                  <div class="archive-check">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                  </div>
+                  <div class="archive-card-title">${escapeHtml(t.title)}</div>
+                </div>
+                ${t.description ? `<div class="archive-card-desc">${escapeHtml(t.description)}</div>` : ''}
+                <div class="archive-card-meta">
+                  <span class="badge badge-cat" style="background:${cat.color}">${cat.label}</span>
+                  <span class="badge badge-pri-${t.priority}">${pri.label}</span>
+                  <span class="archive-meta-item">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    原定 ${relativeDate(t.date)}
+                  </span>
+                  <span class="archive-meta-item">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    完成于 ${compTimeStr}
+                  </span>
+                </div>
+                <div class="archive-card-actions">
+                  <button class="archive-act-btn restore" onclick="restoreTask('${t.id}')" title="恢复为待办">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                  </button>
+                  <button class="archive-act-btn del" onclick="deleteTask('${t.id}')" title="删除">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3"/></svg>
+                  </button>
+                </div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>`;
+      }).join('')
+    }
+  `;
+}
+function onArchiveSearch(v){
+  state.archiveFilters.search = v;
+  renderArchive();
+  const inp = document.querySelector('.archive-toolbar .search-box input');
+  if(inp){ inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+}
+function onArchiveFilter(key, val){
+  state.archiveFilters[key] = val;
+  renderArchive();
+}
+function restoreTask(id){
+  const t = state.tasks.find(x=>x.id===id);
+  if(!t) return;
+  t.status = 'pending';
+  t.completedAt = null;
+  t.updatedAt = new Date().toISOString();
+  saveTasks();
+  showToast('已恢复为待办');
+  renderArchive();
+}
+function exportCompleted(){
+  const completed = state.tasks.filter(t=>t.status==='completed');
+  if(completed.length===0){ showToast('暂无已完成任务可导出'); return; }
+  const data = JSON.stringify(completed, null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `completed-${todayStr()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`已导出 ${completed.length} 条已完成任务`);
+}
+
+/* ====== Master Render ====== */
+function render(){
+  switch(state.view){
+    case 'dashboard': renderDashboard(); break;
+    case 'calendar': renderCalendar(); break;
+    case 'tasks': renderTasks(); break;
+    case 'stats': renderStats(); break;
+    case 'archive': renderArchive(); break;
+  }
+}
+
+/* ====== Modal ====== */
+function openModal(taskId, defaultDate){
+  state.editingId = taskId || null;
+  const modal = document.getElementById('modalOverlay');
+  const title = document.getElementById('modalTitle');
+  const btnDelete = document.getElementById('btnDelete');
+
+  if(taskId){
+    const t = state.tasks.find(x=>x.id===taskId);
+    if(!t) return;
+    title.textContent = '编辑任务';
+    btnDelete.style.display = 'flex';
+    document.getElementById('f-title').value = t.title || '';
+    document.getElementById('f-desc').value = t.description || '';
+    document.getElementById('f-category').value = t.category || 'work';
+    document.getElementById('f-priority').value = t.priority || 'medium';
+    document.getElementById('f-date').value = t.date || todayStr();
+    document.getElementById('f-status').value = t.status || 'pending';
+    document.getElementById('f-start').value = t.startTime || '';
+    document.getElementById('f-end').value = t.endTime || '';
+  } else {
+    title.textContent = '新建任务';
+    btnDelete.style.display = 'none';
+    document.getElementById('f-title').value = '';
+    document.getElementById('f-desc').value = '';
+    document.getElementById('f-category').value = 'work';
+    document.getElementById('f-priority').value = 'medium';
+    document.getElementById('f-date').value = defaultDate || todayStr();
+    document.getElementById('f-status').value = 'pending';
+    document.getElementById('f-start').value = '';
+    document.getElementById('f-end').value = '';
+  }
+  modal.classList.add('active');
+  setTimeout(()=>document.getElementById('f-title').focus(), 50);
+}
+function closeModal(){
+  document.getElementById('modalOverlay').classList.remove('active');
+  state.editingId = null;
+}
+function saveTask(){
+  const title = document.getElementById('f-title').value.trim();
+  const date = document.getElementById('f-date').value;
+  if(!title){ showToast('请输入任务标题'); return; }
+  if(!date){ showToast('请选择日期'); return; }
+
+  const data = {
+    title,
+    description: document.getElementById('f-desc').value.trim(),
+    category: document.getElementById('f-category').value,
+    priority: document.getElementById('f-priority').value,
+    date,
+    status: document.getElementById('f-status').value,
+    startTime: document.getElementById('f-start').value,
+    endTime: document.getElementById('f-end').value
+  };
+
+  if(state.editingId){
+    const t = state.tasks.find(x=>x.id===state.editingId);
+    if(t){
+      const wasCompleted = t.status==='completed';
+      Object.assign(t, data);
+      t.updatedAt = new Date().toISOString();
+      if(data.status==='completed' && !t.completedAt) t.completedAt = new Date().toISOString();
+      if(data.status!=='completed') t.completedAt = null;
+      if(data.status==='completed' && !wasCompleted) showCuteToast('宝贝真棒！');
+    }
+    showToast('任务已更新');
+  } else {
+    const now = new Date().toISOString();
+    state.tasks.push({
+      id: uid(),
+      ...data,
+      createdAt: now,
+      updatedAt: now,
+      completedAt: data.status==='completed' ? now : null
+    });
+    cuteToastsForCreate(data.category).forEach(showCuteToast);
+  }
+  saveTasks();
+  closeModal();
+  render();
+}
+function deleteCurrentTask(){
+  if(state.editingId){
+    deleteTask(state.editingId);
+    closeModal();
+  }
+}
+function deleteTask(id){
+  state.tasks = state.tasks.filter(t=>t.id!==id);
+  saveTasks();
+  showToast('任务已删除');
+  render();
+}
+function cycleStatus(id){
+  const t = state.tasks.find(x=>x.id===id);
+  if(!t) return;
+  const order = ['pending','in-progress','completed'];
+  const idx = order.indexOf(t.status);
+  t.status = order[(idx+1)%3];
+  t.updatedAt = new Date().toISOString();
+  t.completedAt = t.status==='completed' ? new Date().toISOString() : null;
+  if(t.status==='completed') showCuteToast('宝贝真棒！');
+  saveTasks();
+  render();
+}
+
+/* ====== Export / Import ====== */
+function exportData(){
+  const data = JSON.stringify(state.tasks, null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `schedule-${todayStr()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('数据已导出');
+}
+function importData(file){
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    try{
+      const data = JSON.parse(e.target.result);
+      if(!Array.isArray(data)) throw new Error('Invalid format');
+      if(state.tasks.length>0){
+        if(!confirm('当前已有任务数据，是否覆盖？\n点击"取消"则追加导入。')){
+          state.tasks = state.tasks.concat(data);
+        } else {
+          state.tasks = data;
+        }
+      } else {
+        state.tasks = data;
+      }
+      saveTasks();
+      render();
+      showToast(`成功导入 ${data.length} 条任务`);
+    }catch(err){
+      showToast('导入失败：文件格式不正确');
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* ====== Sample Data ====== */
+function addSampleTasks(){
+  const today = todayStr();
+  const tomorrow = dateStr(new Date(Date.now()+86400000));
+  const afterTomorrow = dateStr(new Date(Date.now()+172800000));
+  const in3days = dateStr(new Date(Date.now()+259200000));
+
+  state.tasks = [
+    {id:uid(), title:'项目周会', description:'同步本周进度与下周计划', category:'work', priority:'high', date:today, status:'completed', startTime:'09:00', endTime:'10:00', createdAt:new Date().toISOString(), completedAt:new Date().toISOString()},
+    {id:uid(), title:'代码评审', description:'Review PR #1284', category:'work', priority:'medium', date:today, status:'in-progress', startTime:'14:00', endTime:'15:30', createdAt:new Date().toISOString()},
+    {id:uid(), title:'晚间慢跑', description:'3公里有氧', category:'health', priority:'low', date:today, status:'pending', startTime:'19:00', endTime:'19:30', createdAt:new Date().toISOString()},
+    {id:uid(), title:'阅读《深度工作》第3章', description:'', category:'study', priority:'medium', date:today, status:'pending', startTime:'', endTime:'', createdAt:new Date().toISOString()},
+    {id:uid(), title:'产品需求评审', description:'Q4功能规划讨论', category:'work', priority:'high', date:tomorrow, status:'pending', startTime:'10:00', endTime:'12:00', createdAt:new Date().toISOString()},
+    {id:uid(), title:'健身计划', description:'上肢力量训练', category:'health', priority:'medium', date:tomorrow, status:'pending', startTime:'18:00', endTime:'19:00', createdAt:new Date().toISOString()},
+    {id:uid(), title:'给家人打电话', description:'', category:'personal', priority:'medium', date:tomorrow, status:'pending', startTime:'20:00', endTime:'20:30', createdAt:new Date().toISOString()},
+    {id:uid(), title:'学习 React Server Components', description:'', category:'study', priority:'low', date:afterTomorrow, status:'pending', startTime:'', endTime:'', createdAt:new Date().toISOString()},
+    {id:uid(), title:'季度总结报告', description:'准备PPT和数据分析', category:'work', priority:'high', date:in3days, status:'pending', startTime:'', endTime:'', createdAt:new Date().toISOString()},
+  ];
+  saveTasks();
+}
+
+/* ====== Event Binding ====== */
+function bindEvents(){
+  // Click outside modal to close
+  document.getElementById('modalOverlay').addEventListener('click', (e)=>{
+    if(e.target.id==='modalOverlay') closeModal();
+  });
+
+  // Import file
+  document.getElementById('importInput').addEventListener('change', (e)=>{
+    if(e.target.files[0]) importData(e.target.files[0]);
+    e.target.value = '';
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e)=>{
+    if(e.key==='Escape'){ closeModal(); closeSyncModal(); }
+    if((e.ctrlKey||e.metaKey) && e.key==='n'){
+      e.preventDefault();
+      openModal();
+    }
+    if((e.ctrlKey||e.metaKey) && e.key==='Enter' && document.getElementById('modalOverlay').classList.contains('active')){
+      e.preventDefault();
+      saveTask();
+    }
+    if((e.ctrlKey||e.metaKey) && e.key==='s'){
+      e.preventDefault();
+      manualSync();
+    }
+    if(e.altKey){
+      const views = {'1':'dashboard','2':'calendar','3':'tasks','4':'stats','5':'archive'};
+      if(views[e.key]){ e.preventDefault(); switchView(views[e.key]); }
+    }
+  });
+
+  // Click outside sync modal to close
+  document.getElementById('syncModalOverlay').addEventListener('click', (e)=>{
+    if(e.target.id==='syncModalOverlay') closeSyncModal();
+  });
+}
+
+/* ====== Cloud Sync ====== */
+function loadCloudConfig(){
+  try{
+    const raw = localStorage.getItem(SYNC_CONFIG_KEY);
+    if(raw){
+      const config = JSON.parse(raw);
+      cloudSync.url = config.url || '';
+      cloudSync.syncKey = config.syncKey || '';
+      cloudSync.enabled = !!(cloudSync.url && cloudSync.syncKey);
+    }
+  }catch(e){}
+}
+
+function renderSyncBar(){
+  const container = document.getElementById('syncBarContainer');
+  if(!container) return;
+
+  if(!cloudSync.enabled){
+    container.innerHTML = `<div class="sync-bar sync-off" onclick="openSyncModal()">
+      <span>☁️</span>
+      <span class="sync-text">开启云同步，多端数据互通</span>
+      <span class="sync-action">去设置</span>
+    </div>`;
+    return;
+  }
+
+  const stateClass = cloudSync.state;
+  const stateText = cloudSync.state==='syncing' ? '同步中...' :
+    cloudSync.state==='success' ? '已同步' :
+    cloudSync.state==='error' ? '同步失败，点击重试' : '点击同步';
+
+  const dot = cloudSync.state==='syncing' ?
+    '<div class="sync-spinner"></div>' :
+    `<div class="sync-dot ${cloudSync.state==='success'?'ok':cloudSync.state==='error'?'err':'idle'}"></div>`;
+
+  container.innerHTML = `<div class="sync-bar sync-${stateClass}" onclick="manualSync()">
+    ${dot}
+    <span class="sync-text">${stateText}</span>
+    <span class="sync-action" onclick="event.stopPropagation();openSyncModal()">设置</span>
+  </div>`;
+}
+
+function openSyncModal(){
+  document.getElementById('sync-url').value = cloudSync.url;
+  document.getElementById('sync-key').value = cloudSync.syncKey;
+  document.getElementById('syncClearBtn').style.display = cloudSync.enabled ? 'flex' : 'none';
+  document.getElementById('syncModalOverlay').classList.add('active');
+}
+
+function closeSyncModal(){
+  document.getElementById('syncModalOverlay').classList.remove('active');
+}
+
+function saveSyncConfig(){
+  const url = document.getElementById('sync-url').value.trim();
+  const syncKey = document.getElementById('sync-key').value.trim();
+
+  if(!url){ showToast('请输入 HTTP 触发地址'); return; }
+  if(!syncKey){ showToast('请输入同步密钥'); return; }
+
+  localStorage.setItem(SYNC_CONFIG_KEY, JSON.stringify({url, syncKey}));
+  cloudSync.url = url;
+  cloudSync.syncKey = syncKey;
+  cloudSync.enabled = true;
+
+  closeSyncModal();
+  renderSyncBar();
+  showToast('配置已保存，开始同步...');
+  manualSync();
+}
+
+function _debounceCloudPush(){
+  if(!cloudSync.enabled) return;
+  if(cloudSync.pushTimer) clearTimeout(cloudSync.pushTimer);
+  cloudSync.pushTimer = setTimeout(()=>{ syncToCloud(); }, 2000);
+}
+
+async function syncToCloud(){
+  if(!cloudSync.enabled) return;
+  if(Date.now() - cloudSync.lastPushAt < 3000) return;
+  cloudSync.lastPushAt = Date.now();
+
+  cloudSync.state = 'syncing';
+  renderSyncBar();
+
+  try{
+    const res = await fetch(cloudSync.url, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        action: 'sync',
+        syncKey: cloudSync.syncKey,
+        localTasks: state.tasks
+      })
+    });
+    const result = await res.json();
+    if(result.ok){
+      state.tasks = result.tasks;
+      saveTasksLocal();
+      cloudSync.state = 'success';
+      render();
+    } else {
+      cloudSync.state = 'error';
+      console.error('同步失败:', result.error);
+    }
+  }catch(e){
+    cloudSync.state = 'error';
+    console.error('云端推送失败:', e);
+  }
+  renderSyncBar();
+}
+
+// Only save to local without triggering cloud push (used after cloud sync)
+function saveTasksLocal(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.tasks));
+}
+
+async function syncFromCloud(silent){
+  if(!cloudSync.enabled) return;
+
+  if(!silent){
+    cloudSync.state = 'syncing';
+    renderSyncBar();
+  }
+
+  try{
+    const res = await fetch(cloudSync.url, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        action: 'sync',
+        syncKey: cloudSync.syncKey,
+        localTasks: state.tasks
+      })
+    });
+    const result = await res.json();
+    if(result.ok){
+      state.tasks = result.tasks;
+      saveTasksLocal();
+      cloudSync.state = 'success';
+      render();
+    } else {
+      cloudSync.state = 'error';
+    }
+  }catch(e){
+    console.error('云端拉取失败:', e);
+    cloudSync.state = silent ? 'idle' : 'error';
+  }
+  renderSyncBar();
+}
+
+async function manualSync(){
+  if(!cloudSync.enabled){
+    openSyncModal();
+    return;
+  }
+  await syncFromCloud(false);
+  if(cloudSync.state === 'success'){
+    showToast('同步成功');
+  } else if(cloudSync.state === 'error'){
+    showToast('同步失败，请检查配置');
+  }
+}
+
+async function clearCloudData(){
+  if(!confirm('确定清空云端所有任务数据吗？本地数据不受影响。')) return;
+  try{
+    const res = await fetch(cloudSync.url, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ action: 'clear', syncKey: cloudSync.syncKey })
+    });
+    const result = await res.json();
+    if(result.ok){
+      showToast(`已清空 ${result.cleared} 条云端数据`);
+      closeSyncModal();
+    } else {
+      showToast('清空失败');
+    }
+  }catch(e){
+    showToast('清空失败: ' + e.message);
+  }
+}
+
+/* ====== Init ====== */
+function init(){
+  loadTasks();
+  if(state.tasks.length===0){
+    addSampleTasks();
+  }
+  loadCloudConfig();
+  renderSyncBar();
+  bindEvents();
+  render();
+  // 启动时静默拉取云端数据
+  if(cloudSync.enabled){
+    syncFromCloud(true);
+  }
+}
+
+init();
+
+/* ====== PWA 离线缓存（仅 HTTPS 生效） ====== */
+if('serviceWorker' in navigator && location.protocol.startsWith('https')){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
