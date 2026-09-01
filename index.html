@@ -242,8 +242,8 @@ input,select,textarea{font-family:inherit;font-size:14px;outline:none}
 .btn-danger:hover{background:#dc2626}
 
 /* ===== Toast ===== */
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--text);color:#fff;padding:10px 24px;border-radius:var(--radius-sm);font-size:14px;z-index:2000;transition:transform .3s ease;box-shadow:var(--shadow-lg)}
-.toast.show{transform:translateX(-50%) translateY(0)}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(12px);opacity:0;pointer-events:none;background:var(--text);color:#fff;padding:10px 24px;border-radius:var(--radius-sm);font-size:14px;z-index:2000;transition:transform .3s ease,opacity .25s ease;box-shadow:var(--shadow-lg)}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 
 /* ===== Cute Toast (甜蜜弹窗) ===== */
 .cute-toast{
