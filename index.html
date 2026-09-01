@@ -810,11 +810,12 @@ function milestoneMessage(n){
   if(isFunMilestone(n)) return MILESTONE_SOUPS[Math.floor(Math.random()*MILESTONE_SOUPS.length)];
   return '';
 }
-function onTaskCompleted(){
+function onTaskCompleted(opts){
   const n = getCompletedTotal() + 1;
   localStorage.setItem(COMPLETED_COUNT_KEY, String(n));
   const msg = milestoneMessage(n);
-  if(msg) showCuteToast(msg, true);
+  if(msg){ showCuteToast(msg, true); return; } // 特殊的日子：只掉这一条彩蛋
+  if(!opts || !opts.noCheer) showCuteToast('宝贝真棒！');
 }
 
 /* ====== Data Queries ====== */
@@ -1519,7 +1520,7 @@ function saveTask(){
       t.updatedAt = new Date().toISOString();
       if(data.status==='completed' && !t.completedAt) t.completedAt = new Date().toISOString();
       if(data.status!=='completed') t.completedAt = null;
-      if(data.status==='completed' && !wasCompleted){ onTaskCompleted(); showCuteToast('宝贝真棒！'); }
+      if(data.status==='completed' && !wasCompleted){ onTaskCompleted(); }
     }
     showToast('任务已更新');
   } else {
@@ -1531,7 +1532,7 @@ function saveTask(){
       updatedAt: now,
       completedAt: data.status==='completed' ? now : null
     });
-    if(data.status==='completed') onTaskCompleted();
+    if(data.status==='completed') onTaskCompleted({noCheer:true});
     cuteToastsForCreate(data.category).forEach(showCuteToast);
   }
   saveTasks();
@@ -1558,7 +1559,7 @@ function cycleStatus(id){
   t.status = order[(idx+1)%3];
   t.updatedAt = new Date().toISOString();
   t.completedAt = t.status==='completed' ? new Date().toISOString() : null;
-  if(t.status==='completed'){ onTaskCompleted(); showCuteToast('宝贝真棒！'); }
+  if(t.status==='completed'){ onTaskCompleted(); }
   saveTasks();
   render();
 }
