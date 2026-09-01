@@ -506,7 +506,6 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
       <span>新建任务</span>
     </button>
     <div class="sidebar-footer">
-      <button class="footer-btn" onclick="openSyncModal()" title="云同步">☁️ 同步</button>
       <button class="footer-btn" onclick="exportData()">导出</button>
       <button class="footer-btn" onclick="document.getElementById('importInput').click()">导入</button>
     </div>
@@ -514,11 +513,9 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
 
   <main class="main">
     <div class="mobile-actions">
-      <button onclick="openSyncModal()">☁️ 同步</button>
       <button onclick="exportData()">📤 导出</button>
       <button onclick="document.getElementById('importInput').click()">📥 导入</button>
     </div>
-    <div id="syncBarContainer"></div>
     <div id="view-dashboard" class="view active"></div>
     <div id="view-calendar" class="view"></div>
     <div id="view-tasks" class="view"></div>
@@ -627,42 +624,6 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
 <div class="toast" id="toast"></div>
 <div class="cute-toast" id="cuteToast"></div>
 <input type="file" id="importInput" accept=".json" style="display:none">
-
-<!-- Cloud Sync Modal -->
-<div class="modal-overlay" id="syncModalOverlay">
-  <div class="modal sync-modal">
-    <div class="modal-header">
-      <div class="modal-title">☁️ 云同步设置</div>
-      <button class="modal-close" onclick="closeSyncModal()">
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-      </button>
-    </div>
-    <div class="modal-body">
-      <div class="sync-form-item">
-        <label class="sync-form-label">HTTP 触发地址</label>
-        <input type="text" class="sync-form-input" id="sync-url" placeholder="如: https://starschedule-xxxxx.service.tcloudbase.com/taskApi">
-        <div class="sync-form-hint">在云开发控制台 → 云函数 → taskApi → 触发器 中获取</div>
-      </div>
-      <div class="sync-form-item">
-        <label class="sync-form-label">同步密钥</label>
-        <input type="text" class="sync-form-input" id="sync-key" placeholder="与小程序中填写的密钥一致">
-        <div class="sync-form-hint">用于标识你的数据，手机和电脑填同一个密钥即可同步</div>
-      </div>
-      <div class="sync-guide">
-        <div class="sync-guide-title">配置步骤</div>
-        <div class="sync-guide-step"><span class="sync-guide-num">1</span><span>注册微信小程序账号，开通云开发，创建云环境</span></div>
-        <div class="sync-guide-step"><span class="sync-guide-num">2</span><span>在开发者工具中右键 cloudfunctions/taskApi → 上传并部署</span></div>
-        <div class="sync-guide-step"><span class="sync-guide-num">3</span><span>在云开发控制台 → 云函数 → taskApi → 触发器，开启 HTTP 触发</span></div>
-        <div class="sync-guide-step"><span class="sync-guide-num">4</span><span>复制触发地址填入上方，设置同步密钥，保存即可</span></div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-danger" id="syncClearBtn" style="margin-right:auto;display:none" onclick="clearCloudData()">清空云端</button>
-      <button class="btn btn-cancel" onclick="closeSyncModal()">取消</button>
-      <button class="btn btn-save" onclick="saveSyncConfig()">保存并同步</button>
-    </div>
-  </div>
-</div>
 
 <script>
 /* ====== State & Constants ====== */
@@ -1637,7 +1598,8 @@ function bindEvents(){
   });
 
   // Click outside sync modal to close
-  document.getElementById('syncModalOverlay').addEventListener('click', (e)=>{
+  const _syncModalEl = document.getElementById('syncModalOverlay');
+  if(_syncModalEl) _syncModalEl.addEventListener('click', (e)=>{
     if(e.target.id==='syncModalOverlay') closeSyncModal();
   });
 }
