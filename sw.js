@@ -1,5 +1,5 @@
 /* 星星工作台 - 离线缓存 Service Worker */
-const CACHE = 'xingxing-workbench-v2';
+const CACHE = 'xingxing-workbench-v3';
 const ASSETS = ['./', './index.html', './apple-touch-icon.png', './manifest.json'];
 
 // 安装：预缓存核心资源

@@ -259,6 +259,13 @@ input,select,textarea{font-family:inherit;font-size:14px;outline:none}
 .cute-toast.show{transform:translateX(-50%) translateY(0) scale(1);opacity:1}
 .cute-toast::before{content:'💖';margin-right:8px;font-size:14px;display:inline-block;animation:cuteHeart 1.2s ease-in-out infinite}
 @keyframes cuteHeart{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
+/* Milestone 里程碑长文案弹窗 */
+.cute-toast.long{
+  white-space:normal;text-align:center;line-height:1.55;
+  max-width:min(86vw,440px);border-radius:20px;
+  padding:15px 22px;font-size:15px;letter-spacing:.3px;
+}
+.cute-toast.long::before{content:none}
 
 /* ===== Cloud Sync ===== */
 .sync-bar{display:flex;align-items:center;gap:10px;padding:8px 16px;margin-bottom:20px;border-radius:var(--radius-sm);font-size:13px;transition:background .2s;cursor:pointer}
@@ -735,19 +742,22 @@ function showToast(msg){
 /* ====== Cute Toast Queue (甜蜜弹窗队列) ====== */
 const _cuteQueue = [];
 let _cuteShowing = false;
-function showCuteToast(msg){
-  _cuteQueue.push(msg);
+function showCuteToast(msg, long){
+  _cuteQueue.push({msg, long: !!long});
   if(!_cuteShowing) _cuteNext();
 }
 function _cuteNext(){
   if(_cuteQueue.length===0){ _cuteShowing=false; return; }
   _cuteShowing = true;
   const el = document.getElementById('cuteToast');
-  el.textContent = _cuteQueue.shift();
+  const item = _cuteQueue.shift();
+  el.textContent = item.msg;
+  el.classList.toggle('long', !!item.long);
   el.classList.add('show');
   clearTimeout(el._timer);
   el._timer = setTimeout(()=>{
     el.classList.remove('show');
+    el.classList.remove('long');
     setTimeout(_cuteNext, 260);
   }, 2200);
 }
@@ -758,6 +768,53 @@ function cuteToastsForCreate(category){
   else if(category==='other') list.push('星星能有什么坏心思呢');
   list.push('宝贝辛苦了，回家亲亲你');
   return list;
+}
+
+/* ====== Milestone (累计完成里程碑弹窗) ====== */
+const COMPLETED_COUNT_KEY = 'starschedule-completed-total-v1';
+const MILESTONE_FIXED = {
+  20: '不争一时对错，不赌一时意气。很多时候，赢了道理，输了心情。',
+  50: '想都是问题，做才有答案。缓解焦虑最好的方式，就是行动起来。',
+  99: '恭喜完成99件任务，送你99朵香吻！'
+};
+const MILESTONE_SOUPS = [
+  '完成得漂亮！你认真做事的样子，闪闪发光。',
+  '所有的光芒，都需要时间才能被看到。',
+  '你只管努力，剩下的交给时间。',
+  '慢慢来，比较快。稳扎稳打，才能走得更远。',
+  '星光不问赶路人，时光不负有心人。',
+  '坚持不是一件容易的事，但你做到了。',
+  '每一个小目标，都是通往大梦想的台阶。',
+  '把平凡的事做好，就是不平凡。',
+  '别怕路远，走一步有一步的风景。',
+  '你今天的努力，是明天的底气。',
+  '自律带来自由，你正在变成更好的自己。',
+  '所有的好运，都藏在坚持里。',
+  '行动是治愈焦虑最好的良药。',
+  '完成这一件，你又离梦想近了一步。',
+  '你比想象中更强大，加油宝贝！'
+];
+function getCompletedTotal(){
+  const v = parseInt(localStorage.getItem(COMPLETED_COUNT_KEY)||'0', 10);
+  return isNaN(v) ? 0 : v;
+}
+function isFunMilestone(n){
+  if(n < 100) return false;
+  if(n % 100 === 0) return true;                      // 100/200/300...
+  const s = String(n);
+  if(s.length >= 3 && /^(\d)\1+$/.test(s)) return true; // 111/222/333...
+  return [168,188,404,520,521,1024,1314].includes(n);  // 彩蛋数字
+}
+function milestoneMessage(n){
+  if(MILESTONE_FIXED[n]) return MILESTONE_FIXED[n];
+  if(isFunMilestone(n)) return MILESTONE_SOUPS[Math.floor(Math.random()*MILESTONE_SOUPS.length)];
+  return '';
+}
+function onTaskCompleted(){
+  const n = getCompletedTotal() + 1;
+  localStorage.setItem(COMPLETED_COUNT_KEY, String(n));
+  const msg = milestoneMessage(n);
+  if(msg) showCuteToast(msg, true);
 }
 
 /* ====== Data Queries ====== */
@@ -1462,7 +1519,7 @@ function saveTask(){
       t.updatedAt = new Date().toISOString();
       if(data.status==='completed' && !t.completedAt) t.completedAt = new Date().toISOString();
       if(data.status!=='completed') t.completedAt = null;
-      if(data.status==='completed' && !wasCompleted) showCuteToast('宝贝真棒！');
+      if(data.status==='completed' && !wasCompleted){ onTaskCompleted(); showCuteToast('宝贝真棒！'); }
     }
     showToast('任务已更新');
   } else {
@@ -1474,6 +1531,7 @@ function saveTask(){
       updatedAt: now,
       completedAt: data.status==='completed' ? now : null
     });
+    if(data.status==='completed') onTaskCompleted();
     cuteToastsForCreate(data.category).forEach(showCuteToast);
   }
   saveTasks();
@@ -1500,7 +1558,7 @@ function cycleStatus(id){
   t.status = order[(idx+1)%3];
   t.updatedAt = new Date().toISOString();
   t.completedAt = t.status==='completed' ? new Date().toISOString() : null;
-  if(t.status==='completed') showCuteToast('宝贝真棒！');
+  if(t.status==='completed'){ onTaskCompleted(); showCuteToast('宝贝真棒！'); }
   saveTasks();
   render();
 }
@@ -1791,6 +1849,10 @@ async function clearCloudData(){
 /* ====== Init ====== */
 function init(){
   loadTasks();
+  if(localStorage.getItem(COMPLETED_COUNT_KEY)===null){
+    const c = state.tasks.filter(t=>t.status==='completed').length;
+    localStorage.setItem(COMPLETED_COUNT_KEY, String(c));
+  }
   if(state.tasks.length===0){
     addSampleTasks();
   }
