@@ -136,6 +136,10 @@ input,select,textarea{font-family:inherit;font-size:14px;outline:none}
 .dot{width:6px;height:6px;border-radius:50%}
 .day-more{font-size:10px;color:var(--text3)}
 .day-task-label{font-size:11px;padding:1px 4px;border-radius:3px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 法定节假日标记：放假日数字变红 + 节日名标签，调休补班日显示"班" */
+.cal-day.holiday:not(.today) .day-num{color:#e02424;font-weight:600}
+.holiday-name{font-style:normal;font-size:10px;font-weight:600;color:#e02424;background:rgba(224,36,36,.09);border-radius:3px;padding:1px 3px;margin-right:4px;vertical-align:1px;display:inline-block;line-height:1.35}
+.work-tag{font-style:normal;font-size:9px;font-weight:500;color:#8a94a6;border:1px solid #cdd5e0;border-radius:3px;padding:0 2px;margin-left:4px;vertical-align:1px;line-height:1.5}
 
 /* ===== Task List ===== */
 .task-toolbar{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
@@ -401,6 +405,8 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
   .cal-month{font-size:16px;min-width:90px}
   .cal-btn{width:36px;height:36px}
   .cal-today-btn{padding:8px 14px}
+  .holiday-name{font-size:9px;padding:0 2px}
+  .work-tag{font-size:8px}
 
   /* Task table -> 3 columns on mobile */
   .task-row{grid-template-columns:32px 1fr auto;gap:6px;padding:0 12px;min-height:50px}
@@ -981,6 +987,32 @@ function renderDashboard(){
 }
 
 /* ====== Render: Calendar ====== */
+/* ====== 中国法定节假日（按国务院放假安排）======
+   off: [开始MM-DD, 结束MM-DD, 节日名] — 放假区间（区间内数字标红，首日显示节日名）
+   work: ['MM-DD', ...] — 调休补班日（多为周末，显示"班"）
+   注：2027 年安排待国务院 2026 年底公布后补充 */
+const FESTIVAL_YEARS = {
+  '2025':{
+    off:[['01-01','01-01','元旦'],['01-28','02-04','春节'],['04-04','04-06','清明'],['05-01','05-05','劳动节'],['05-31','06-02','端午'],['10-01','10-08','国庆']],
+    work:['01-26','02-08','04-27','09-28','10-11']
+  },
+  '2026':{
+    off:[['01-01','01-03','元旦'],['02-15','02-23','春节'],['04-04','04-06','清明'],['05-01','05-05','劳动节'],['06-19','06-21','端午'],['09-25','09-27','中秋'],['10-01','10-07','国庆']],
+    work:['01-04','02-14','02-28','05-09','09-20','10-10']
+  }
+};
+function getFestival(y, m, d){
+  const info = FESTIVAL_YEARS[String(y)];
+  if(!info) return null;
+  const md = `${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  if(info.work.includes(md)) return {type:'work'};
+  for(let i=0;i<info.off.length;i++){
+    const seg = info.off[i];
+    if(md>=seg[0] && md<=seg[1]) return {type:'holiday', name: md===seg[0]?seg[2]:''};
+  }
+  return null;
+}
+
 function renderCalendar(){
   const d = state.calDate;
   const year = d.getFullYear();
@@ -1006,8 +1038,20 @@ function renderCalendar(){
     const dayTasks = getTasksByDate(ds);
     const isToday = ds===today;
     const isSelected = ds===state.selectedDate;
-    cells += `<div class="cal-day ${isToday?'today':''} ${isSelected?'selected':''}" onclick="onCalDayClick('${ds}')">
-      <div class="day-num">${day}</div>
+    const fest = getFestival(year, month+1, day);
+    let festCls = '';
+    let numHtml = `<div class="day-num">${day}</div>`;
+    if(fest){
+      if(fest.type==='holiday'){
+        festCls = ' holiday';
+        numHtml = `<div class="day-num">${fest.name?`<span class="holiday-name">${fest.name}</span>`:''}${day}</div>`;
+      }else{
+        festCls = ' workday';
+        numHtml = `<div class="day-num">${day}<span class="work-tag">班</span></div>`;
+      }
+    }
+    cells += `<div class="cal-day${festCls} ${isToday?'today':''} ${isSelected?'selected':''}" onclick="onCalDayClick('${ds}')">
+      ${numHtml}
       <div class="day-dots">
         ${dayTasks.slice(0,3).map(t=>{
           const cat = CATS[t.category];
