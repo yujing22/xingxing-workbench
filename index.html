@@ -149,6 +149,11 @@ input,select,textarea{font-family:inherit;font-size:14px;outline:none}
 .search-box svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text3)}
 .filter-select{padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--card);cursor:pointer;transition:border .15s}
 .filter-select:focus{border-color:var(--primary)}
+/* 状态筛选：多选标签 */
+.status-chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.status-chip{padding:8px 13px;border:1px solid var(--border);border-radius:999px;font-size:13px;background:var(--card);color:var(--text2);transition:all .15s;white-space:nowrap;cursor:pointer}
+.status-chip:hover{border-color:var(--primary);color:var(--primary)}
+.status-chip.active{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:500}
 .task-table{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
 .task-row{display:grid;grid-template-columns:36px 1fr 80px 80px 130px 90px 80px;align-items:center;padding:0 16px;border-bottom:1px solid var(--border);transition:background .1s;min-height:52px}
 .task-row:last-child{border-bottom:none}
@@ -419,6 +424,8 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
   .task-toolbar{gap:8px}
   .search-box{min-width:100%;order:0}
   .filter-select{flex:1;min-width:0;font-size:12px;padding:8px 8px}
+  .status-chips{flex:1;min-width:100%;gap:6px}
+  .status-chip{flex:1;text-align:center;padding:8px 6px;font-size:12px}
 
   /* Modal -> bottom sheet */
   .modal-overlay{align-items:flex-end}
@@ -659,13 +666,15 @@ const STATS = {
   'in-progress':{label:'进行中',color:'#3b82f6'},
   completed:{label:'已完成',color:'#10b981'}
 };
+// 任务列表展示顺序：进行中 → 待办 → 已完成
+const STATUS_ORDER = {'in-progress':0, pending:1, completed:2};
 
 const state = {
   tasks:[],
   view:'dashboard',
   calDate:new Date(),
   selectedDate:null,
-  filters:{status:'all',category:'all',priority:'all',search:''},
+  filters:{statuses:[],category:'all',priority:'all',search:''},
   editingId:null,
   calDayFilter:null,
   archiveFilters:{category:'all',search:''}
@@ -847,7 +856,7 @@ function getFilteredTasks(){
   const f = state.filters;
   return state.tasks
     .filter(t=>{
-      if(f.status!=='all' && t.status!==f.status) return false;
+      if(f.statuses.length && !f.statuses.includes(t.status)) return false;
       if(f.category!=='all' && t.category!==f.category) return false;
       if(f.priority!=='all' && t.priority!==f.priority) return false;
       if(f.search){
@@ -858,6 +867,9 @@ function getFilteredTasks(){
       return true;
     })
     .sort((a,b)=>{
+      // 状态优先：进行中 → 待办 → 已完成
+      const sa = STATUS_ORDER[a.status], sb = STATUS_ORDER[b.status];
+      if(sa!==sb) return sa-sb;
       if(a.date!==b.date) return a.date.localeCompare(b.date);
       if(a.startTime && b.startTime) return a.startTime.localeCompare(b.startTime);
       return 0;
@@ -1129,12 +1141,12 @@ function renderTasks(){
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
         <input type="text" placeholder="搜索任务..." value="${escapeHtml(f.search)}" oninput="onSearch(this.value)">
       </div>
-      <select class="filter-select" onchange="onFilter('status',this.value)">
-        <option value="all" ${f.status==='all'?'selected':''}>全部状态</option>
-        <option value="pending" ${f.status==='pending'?'selected':''}>待办</option>
-        <option value="in-progress" ${f.status==='in-progress'?'selected':''}>进行中</option>
-        <option value="completed" ${f.status==='completed'?'selected':''}>已完成</option>
-      </select>
+      <div class="status-chips">
+        <button class="status-chip ${f.statuses.length===0?'active':''}" onclick="onStatusAll()">全部状态</button>
+        <button class="status-chip ${f.statuses.includes('in-progress')?'active':''}" onclick="toggleStatusFilter('in-progress')">进行中</button>
+        <button class="status-chip ${f.statuses.includes('pending')?'active':''}" onclick="toggleStatusFilter('pending')">待办</button>
+        <button class="status-chip ${f.statuses.includes('completed')?'active':''}" onclick="toggleStatusFilter('completed')">已完成</button>
+      </div>
       <select class="filter-select" onchange="onFilter('category',this.value)">
         <option value="all" ${f.category==='all'?'selected':''}>全部分类</option>
         ${Object.entries(CATS).map(([k,v])=>`<option value="${k}" ${f.category===k?'selected':''}>${v.label}</option>`).join('')}
@@ -1197,6 +1209,17 @@ function onSearch(v){
 }
 function onFilter(key, val){
   state.filters[key] = val;
+  renderTasks();
+}
+// 状态筛选：多选，点选切换；不选任何状态即"全部"
+function toggleStatusFilter(st){
+  const arr = state.filters.statuses;
+  const i = arr.indexOf(st);
+  if(i>=0) arr.splice(i,1); else arr.push(st);
+  renderTasks();
+}
+function onStatusAll(){
+  state.filters.statuses = [];
   renderTasks();
 }
 function clearDateFilter(){
