@@ -300,6 +300,16 @@ input,select,textarea{font-family:inherit;font-size:14px;outline:none}
 .sync-mini-btn.ghost:hover{background:var(--border);color:var(--text)}
 .sync-tip{font-size:12px;color:var(--text3);margin-top:6px;line-height:1.5}
 .sync-warn{background:#fffbeb;border:1px solid #fcd34d;border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;color:#92400e;line-height:1.5;margin-top:10px}
+/* 给 TA 开一份独立空间 */
+.sync-invite{margin-top:16px;padding:14px;border:1px dashed var(--border2);border-radius:var(--radius-sm);background:var(--bg)}
+.sync-invite-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px}
+.sync-invite-desc{font-size:12px;color:var(--text3);line-height:1.5;margin-bottom:10px}
+.sync-invite-row{display:flex;gap:8px}
+.sync-invite-row input{flex:1;min-width:0;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--card);color:var(--text)}
+.sync-invite-row input:focus{outline:none;border-color:var(--primary)}
+.sync-invite-row button{flex-shrink:0;padding:8px 16px;border:none;border-radius:var(--radius-sm);background:var(--primary);color:#fff;font-size:13px;font-weight:500;cursor:pointer}
+.sync-invite-row button:active{background:var(--primary-hover)}
+.sync-invite-out{margin-top:10px}
 
 /* Sync Modal */
 .sync-modal{width:460px;max-width:90vw}
@@ -460,6 +470,8 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
   .sync-modal{width:100%;max-width:100%}
   .sync-status{font-size:12px;padding:10px 12px}
   .sync-code{font-size:10px;padding:9px 10px}
+  .sync-invite{padding:12px}
+  .sync-invite-row button{padding:8px 12px}
   .sync-btn-row{flex-direction:column}
   .form-row{grid-template-columns:1fr 1fr;gap:8px}
   .form-row-3{grid-template-columns:1fr}
@@ -716,13 +728,20 @@ const state = {
 const SYNC_CONFIG_KEY = 'starschedule-sync-config-v2';
 const SYNC_TOMB_KEY = 'starschedule-sync-tombstones-v1';
 const SYNC_DEVICE_KEY = 'starschedule-sync-device-v1';
-const SYNC_FILE_PATH = 'sync.json';
-const SYNC_CODE_PREFIX = 'XY1.';
+const SYNC_FILE_PATH = 'sync.json';           // 旧版（无空间）用的路径，保持兼容
+const SYNC_SPACE_DIR = 'spaces';               // 每个空间一个文件：spaces/<slug>.json
+const SYNC_CODE_PREFIX = 'XY2.';
+const SYNC_CODE_PREFIX_V1 = 'XY1.';
+const SYNC_INVITE_KEY = 'starschedule-sync-invite-v1';
 let syncState = {
   enabled: false,
   owner: '',
   repo: '',
   token: '',
+  space: '',        // 空间 slug，空 = 旧版主空间（sync.json）
+  spaceName: '',    // 空间的显示名（只影响界面，不影响存储路径）
+  inviteCode: '',   // 最近一次为 TA 生成的空间码
+  inviteName: '',   // 生成邀请码时填的空间名（仅用于回填输入框）
   status: 'idle', // idle | syncing | success | error
   message: '',
   lastSyncAt: null,
@@ -1842,10 +1861,13 @@ function loadSyncConfig(){
       syncState.owner = c.owner || '';
       syncState.repo = c.repo || '';
       syncState.token = c.token || '';
+      syncState.space = c.space || '';
+      syncState.spaceName = c.spaceName || '';
       syncState.lastSyncAt = c.lastSyncAt || null;
       syncState.enabled = !!(syncState.owner && syncState.repo && syncState.token);
     }
   }catch(e){}
+  try{ syncState.inviteCode = localStorage.getItem(SYNC_INVITE_KEY) || ''; }catch(e){}
   try{
     let did = localStorage.getItem(SYNC_DEVICE_KEY);
     if(!did){ did = uid(); localStorage.setItem(SYNC_DEVICE_KEY, did); }
@@ -1856,9 +1878,20 @@ function persistSyncConfig(){
   try{
     localStorage.setItem(SYNC_CONFIG_KEY, JSON.stringify({
       owner: syncState.owner, repo: syncState.repo,
-      token: syncState.token, lastSyncAt: syncState.lastSyncAt
+      token: syncState.token, space: syncState.space,
+      spaceName: syncState.spaceName, lastSyncAt: syncState.lastSyncAt
     }));
   }catch(e){}
+}
+function persistInviteCode(code){
+  syncState.inviteCode = code || '';
+  try{
+    if(code) localStorage.setItem(SYNC_INVITE_KEY, code);
+    else localStorage.removeItem(SYNC_INVITE_KEY);
+  }catch(e){}
+}
+function spaceLabel(){
+  return syncState.spaceName || (syncState.space ? '我的空间' : '主空间');
 }
 function getTombstones(){
   try{ return JSON.parse(localStorage.getItem(SYNC_TOMB_KEY) || '{}') || {}; }catch(e){ return {}; }
@@ -1873,22 +1906,47 @@ function markDeleted(id){
 }
 
 function encodeSyncCode(){
-  return SYNC_CODE_PREFIX + utf8ToB64(JSON.stringify({o:syncState.owner, r:syncState.repo, t:syncState.token}));
+  return SYNC_CODE_PREFIX + utf8ToB64(JSON.stringify({
+    o:syncState.owner, r:syncState.repo, t:syncState.token,
+    s:syncState.space, n:syncState.spaceName
+  }));
+}
+function newSpaceSlug(){
+  const chars = 'abcdefghijkmnpqrstuvwxyz23456789';
+  let s = '';
+  for(let i=0;i<10;i++) s += chars[Math.floor(Math.random()*chars.length)];
+  return s;
+}
+// 用同一套账号凭证、换一个空间，生成给 TA 的码（不切走自己当前的空间）
+function buildSpaceCode(space, name){
+  return SYNC_CODE_PREFIX + utf8ToB64(JSON.stringify({
+    o:syncState.owner, r:syncState.repo, t:syncState.token, s:space, n:name
+  }));
 }
 function applySyncCode(code){
   const raw = String(code||'').replace(/\s+/g,'');
-  const body = raw.indexOf(SYNC_CODE_PREFIX)===0 ? raw.slice(SYNC_CODE_PREFIX.length) : raw;
+  let body = raw;
+  if(raw.indexOf(SYNC_CODE_PREFIX)===0) body = raw.slice(SYNC_CODE_PREFIX.length);
+  else if(raw.indexOf(SYNC_CODE_PREFIX_V1)===0) body = raw.slice(SYNC_CODE_PREFIX_V1.length);
   const obj = JSON.parse(b64ToUtf8(body));
   if(!obj || !obj.o || !obj.r || !obj.t) throw new Error('incomplete sync code');
+  const prevSpace = syncState.space;
   syncState.owner = obj.o;
   syncState.repo = obj.r;
   syncState.token = obj.t;
+  syncState.space = obj.s || '';        // 旧版码没有空间字段 → 沿用主空间
+  syncState.spaceName = obj.n || '';
   syncState.enabled = true;
+  // 换了空间：清掉旧的删除记录，避免误删新空间里同名的任务
+  if(prevSpace !== syncState.space) setTombstones({});
   persistSyncConfig();
 }
 
+function syncFilePath(){
+  return syncState.space ? (SYNC_SPACE_DIR + '/' + syncState.space + '.json') : SYNC_FILE_PATH;
+}
 function syncApiUrl(){
-  return 'https://api.github.com/repos/' + syncState.owner + '/' + syncState.repo + '/contents/' + SYNC_FILE_PATH;
+  return 'https://api.github.com/repos/' + syncState.owner + '/' + syncState.repo + '/contents/' + syncFilePath();
 }
 function friendlySyncError(e){
   const msg = String((e && e.message) || e);
@@ -1998,7 +2056,7 @@ async function syncNow(opts){
   try{
     const r = await doSyncRound(0);
     syncState.status = 'success';
-    syncState.message = r.changed ? '已同步 · 本机更新为 ' + r.count + ' 条任务' : '已同步 · 两台设备数据一致';
+    syncState.message = r.changed ? '已同步 · 本机更新为 ' + r.count + ' 条任务' : '已同步 · 数据已是最新';
     syncState.lastSyncAt = new Date().toISOString();
     persistSyncConfig();
     if(r.changed) render();
@@ -2047,15 +2105,16 @@ function renderSyncModal(){
   if(!syncState.enabled){
     body.innerHTML = '<div class="sync-form-item">'
       + '<label class="sync-form-label">同步码</label>'
-      + '<textarea class="sync-code" id="syncCodeInput" rows="3" placeholder="在这里粘贴同步码（XY1. 开头的一串字符）"></textarea>'
-      + '<div class="sync-tip">同步码把两台设备连在一起，只需要粘贴一次。</div>'
+      + '<textarea class="sync-code" id="syncCodeInput" rows="3" placeholder="在这里粘贴同步码（XY2. 开头的一串字符）"></textarea>'
+      + '<div class="sync-tip">同步码把设备连在一起，只需要粘贴一次。</div>'
       + '</div>'
       + '<div class="sync-guide">'
       + '<div class="sync-guide-title">怎么用</div>'
       + '<div class="sync-guide-step"><div class="sync-guide-num">1</div><div>在已经连上的那台设备打开「同步」，复制里面的同步码</div></div>'
       + '<div class="sync-guide-step"><div class="sync-guide-num">2</div><div>把同步码粘贴到上面的输入框</div></div>'
       + '<div class="sync-guide-step"><div class="sync-guide-num">3</div><div>点「连接」，之后这台设备就会自动同步</div></div>'
-      + '</div>';
+      + '</div>'
+      + '<div class="sync-tip" style="margin-top:14px">💡 两个人用的话，每个人有自己独立的一份同步码：你粘你的，TA 粘 TA 的，任务各归各、互不干扰。</div>';
     footer.innerHTML = '<button class="btn btn-cancel" onclick="closeSyncModal()">关闭</button>'
       + '<button class="btn btn-save" onclick="connectWithCode()">连接</button>';
     return;
@@ -2068,16 +2127,42 @@ function renderSyncModal(){
   const text = syncState.message || '已连接';
   const last = syncState.lastSyncAt ? relativeSyncTime(syncState.lastSyncAt) : '尚未同步';
 
+  const inviteOut = syncState.inviteCode
+    ? '<div class="sync-invite-out">'
+      + '<textarea class="sync-code" id="inviteCodeOut" rows="3" readonly onclick="this.select()">' + escapeHtml(syncState.inviteCode) + '</textarea>'
+      + '<div class="sync-tip">把这一串发给 TA。TA 的第一台设备粘贴连接，第二台设备再从第一台复制这段码即可。</div>'
+      + '</div>'
+    : '';
+
   body.innerHTML = '<div class="sync-status ' + cls + '">' + dot + '<div class="sync-status-text">' + escapeHtml(text)
-    + '<br><span style="font-size:12px;opacity:.75">上次同步：' + last + '</span></div></div>'
+    + '<br><span style="font-size:12px;opacity:.75">当前空间：' + escapeHtml(spaceLabel()) + ' ｜ 上次同步：' + last + '</span></div></div>'
     + '<div class="sync-form-item" style="margin-top:20px">'
-    + '<label class="sync-form-label">同步码（在其他设备粘贴这一串即可）</label>'
+    + '<label class="sync-form-label">我的同步码（在同一个人其他设备粘贴这一串即可）</label>'
     + '<textarea class="sync-code" id="syncCodeOut" rows="3" readonly onclick="this.select()">' + escapeHtml(encodeSyncCode()) + '</textarea>'
     + '</div>'
-    + '<div class="sync-warn">同步码相当于你数据的钥匙，只在自己设备之间传递，不要发给别人。</div>';
+    + '<div class="sync-invite">'
+    + '<div class="sync-invite-title">给 TA 开一份独立的</div>'
+    + '<div class="sync-invite-desc">生成一串属于 TA 的同步码。TA 的手机和电脑都用这一串，数据和你完全分开 —— 互相看不到，也不会覆盖彼此的任务。</div>'
+    + '<div class="sync-invite-row">'
+    + '<input id="inviteName" value="' + escapeHtml(syncState.inviteName || '') + '" placeholder="TA 的空间名，例如：宝贝" maxlength="12">'
+    + '<button onclick="createInviteCode()">生成</button>'
+    + '</div>'
+    + inviteOut
+    + '</div>'
+    + '<div class="sync-warn">同步码相当于数据的钥匙，只在自己人之间传递，不要发给别人。</div>';
   footer.innerHTML = '<button class="btn btn-danger" style="margin-right:auto" onclick="disconnectSync()">断开</button>'
     + '<button class="btn btn-cancel" onclick="closeSyncModal()">关闭</button>'
     + '<button class="btn btn-save" onclick="manualSyncNow()">立即同步</button>';
+}
+
+function createInviteCode(){
+  if(!syncState.enabled){ showToast('请先连接同步'); return; }
+  const el = document.getElementById('inviteName');
+  const name = el ? el.value.trim() : '';
+  syncState.inviteName = name;
+  persistInviteCode(buildSpaceCode(newSpaceSlug(), name || 'TA 的空间'));
+  renderSyncModal();
+  showToast('已生成，复制发给 TA 吧');
 }
 
 async function connectWithCode(){
@@ -2116,6 +2201,8 @@ function disconnectSync(){
   syncState.owner = '';
   syncState.repo = '';
   syncState.token = '';
+  syncState.space = '';
+  syncState.spaceName = '';
   syncState.status = 'idle';
   syncState.message = '';
   syncState.lastSyncAt = null;
