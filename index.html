@@ -547,7 +547,7 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
     <div class="sidebar-footer">
       <button class="footer-btn" onclick="exportData()">导出</button>
       <button class="footer-btn" onclick="document.getElementById('importInput').click()">导入</button>
-      <button class="footer-btn" onclick="openSyncModal()">同步</button>
+      <button class="footer-btn" onclick="openSyncModal()">账号</button>
     </div>
   </aside>
 
@@ -555,7 +555,7 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
     <div class="mobile-actions">
       <button onclick="exportData()">📤 导出</button>
       <button onclick="document.getElementById('importInput').click()">📥 导入</button>
-      <button onclick="openSyncModal()">☁️ 同步</button>
+      <button onclick="openSyncModal()">👤 账号</button>
     </div>
     <div id="view-dashboard" class="view active"></div>
     <div id="view-calendar" class="view"></div>
@@ -670,7 +670,7 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
 <div class="modal-overlay" id="syncModalOverlay">
   <div class="modal sync-modal">
     <div class="modal-header">
-      <div class="modal-title">账号与同步</div>
+      <div class="modal-title">账号</div>
       <button class="modal-close" onclick="closeSyncModal()">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
@@ -723,6 +723,7 @@ const state = {
 const SYNC_ACCOUNT_KEY = 'starschedule-account-v1';   // 登录状态（账号 + 会话令牌）
 const SYNC_TOMB_KEY = 'starschedule-sync-tombstones-v1';
 const SYNC_DEVICE_KEY = 'starschedule-sync-device-v1';
+const HAD_ACCOUNT_KEY = 'starschedule-had-account-v1';  // 这台设备用过账号后就不再塞示例任务
 let syncState = {
   username: '',      // 当前登录的账号
   token: '',         // 服务端签发的会话令牌
@@ -1563,6 +1564,7 @@ function restoreTask(id){
   if(!t) return;
   t.status = 'pending';
   t.completedAt = null;
+  untagDemo(t);
   t.updatedAt = new Date().toISOString();
   saveTasks();
   showToast('已恢复为待办');
@@ -1673,6 +1675,7 @@ function saveTask(){
     if(t){
       const wasCompleted = t.status==='completed';
       Object.assign(t, data);
+      untagDemo(t);          // 用户改过了，就不再是示例任务
       t.updatedAt = new Date().toISOString();
       if(data.status==='completed'){
         // 完成日期未改动则保留原完成时间；改动过则只替换年月日，保留原时分
@@ -1707,7 +1710,8 @@ function deleteCurrentTask(){
   }
 }
 function deleteTask(id){
-  markDeleted(id);
+  const t = state.tasks.find(x=>x.id===id);
+  if(!isDemoTask(t)) markDeleted(id);   // 示例任务从没同步过，不必留删除记录
   state.tasks = state.tasks.filter(t=>t.id!==id);
   saveTasks();
   showToast('任务已删除');
@@ -1719,6 +1723,7 @@ function cycleStatus(id){
   const order = ['pending','in-progress','completed'];
   const idx = order.indexOf(t.status);
   t.status = order[(idx+1)%3];
+  untagDemo(t);            // 动过就是真任务了
   t.updatedAt = new Date().toISOString();
   t.completedAt = t.status==='completed' ? new Date().toISOString() : null;
   if(t.status==='completed'){ onTaskCompleted(); }
@@ -1744,6 +1749,8 @@ function importData(file){
     try{
       const data = JSON.parse(e.target.result);
       if(!Array.isArray(data)) throw new Error('Invalid format');
+      // 明确导入进来的都算真实任务，示例标记不跟着走
+      data.forEach(t => { if(t && t.demo) delete t.demo; });
       if(state.tasks.length>0){
         if(!confirm('当前已有任务数据，是否覆盖？\n点击"取消"则追加导入。')){
           state.tasks = state.tasks.concat(data);
@@ -1764,6 +1771,12 @@ function importData(file){
 }
 
 /* ====== Sample Data ====== */
+// 示例任务只用来撑场面：带 demo 标记的永远不参与同步，不会混进账号里。
+// 用户一旦改动某条示例任务（编辑 / 改状态 / 从存档恢复），就摘掉标记，它当场变成真任务。
+function isDemoTask(t){ return !!(t && t.demo); }
+function untagDemo(t){ if(t && t.demo) delete t.demo; }
+function syncableTasks(arr){ return (arr || []).filter(t => t && !t.demo); }
+
 function addSampleTasks(){
   const today = todayStr();
   const tomorrow = dateStr(new Date(Date.now()+86400000));
@@ -1771,15 +1784,15 @@ function addSampleTasks(){
   const in3days = dateStr(new Date(Date.now()+259200000));
 
   state.tasks = [
-    {id:uid(), title:'项目周会', description:'同步本周进度与下周计划', category:'work', priority:'high', date:today, status:'completed', startTime:'09:00', endTime:'10:00', createdAt:new Date().toISOString(), completedAt:new Date().toISOString()},
-    {id:uid(), title:'代码评审', description:'Review PR #1284', category:'work', priority:'medium', date:today, status:'in-progress', startTime:'14:00', endTime:'15:30', createdAt:new Date().toISOString()},
-    {id:uid(), title:'晚间慢跑', description:'3公里有氧', category:'health', priority:'low', date:today, status:'pending', startTime:'19:00', endTime:'19:30', createdAt:new Date().toISOString()},
-    {id:uid(), title:'阅读《深度工作》第3章', description:'', category:'study', priority:'medium', date:today, status:'pending', startTime:'', endTime:'', createdAt:new Date().toISOString()},
-    {id:uid(), title:'产品需求评审', description:'Q4功能规划讨论', category:'work', priority:'high', date:tomorrow, status:'pending', startTime:'10:00', endTime:'12:00', createdAt:new Date().toISOString()},
-    {id:uid(), title:'健身计划', description:'上肢力量训练', category:'health', priority:'medium', date:tomorrow, status:'pending', startTime:'18:00', endTime:'19:00', createdAt:new Date().toISOString()},
-    {id:uid(), title:'给家人打电话', description:'', category:'personal', priority:'medium', date:tomorrow, status:'pending', startTime:'20:00', endTime:'20:30', createdAt:new Date().toISOString()},
-    {id:uid(), title:'学习 React Server Components', description:'', category:'study', priority:'low', date:afterTomorrow, status:'pending', startTime:'', endTime:'', createdAt:new Date().toISOString()},
-    {id:uid(), title:'季度总结报告', description:'准备PPT和数据分析', category:'work', priority:'high', date:in3days, status:'pending', startTime:'', endTime:'', createdAt:new Date().toISOString()},
+    {id:uid(), demo:true, title:'项目周会', description:'同步本周进度与下周计划', category:'work', priority:'high', date:today, status:'completed', startTime:'09:00', endTime:'10:00', createdAt:new Date().toISOString(), completedAt:new Date().toISOString()},
+    {id:uid(), demo:true, title:'代码评审', description:'Review PR #1284', category:'work', priority:'medium', date:today, status:'in-progress', startTime:'14:00', endTime:'15:30', createdAt:new Date().toISOString()},
+    {id:uid(), demo:true, title:'晚间慢跑', description:'3公里有氧', category:'health', priority:'low', date:today, status:'pending', startTime:'19:00', endTime:'19:30', createdAt:new Date().toISOString()},
+    {id:uid(), demo:true, title:'阅读《深度工作》第3章', description:'', category:'study', priority:'medium', date:today, status:'pending', startTime:'', endTime:'', createdAt:new Date().toISOString()},
+    {id:uid(), demo:true, title:'产品需求评审', description:'Q4功能规划讨论', category:'work', priority:'high', date:tomorrow, status:'pending', startTime:'10:00', endTime:'12:00', createdAt:new Date().toISOString()},
+    {id:uid(), demo:true, title:'健身计划', description:'上肢力量训练', category:'health', priority:'medium', date:tomorrow, status:'pending', startTime:'18:00', endTime:'19:00', createdAt:new Date().toISOString()},
+    {id:uid(), demo:true, title:'给家人打电话', description:'', category:'personal', priority:'medium', date:tomorrow, status:'pending', startTime:'20:00', endTime:'20:30', createdAt:new Date().toISOString()},
+    {id:uid(), demo:true, title:'学习 React Server Components', description:'', category:'study', priority:'low', date:afterTomorrow, status:'pending', startTime:'', endTime:'', createdAt:new Date().toISOString()},
+    {id:uid(), demo:true, title:'季度总结报告', description:'准备PPT和数据分析', category:'work', priority:'high', date:in3days, status:'pending', startTime:'', endTime:'', createdAt:new Date().toISOString()},
   ];
   saveTasks();
 }
@@ -1952,7 +1965,8 @@ function mergeSyncData(localTasks, localDeleted, remoteTasks, remoteDeleted){
 async function doSyncRound(attempt){
   const remote = await fetchRemote();
   const rd = (remote.data && typeof remote.data==='object') ? remote.data : {tasks:[], deleted:{}};
-  const merged = mergeSyncData(state.tasks, getTombstones(), rd.tasks, rd.deleted);
+  // 示例任务只在本地撑场面：不参与合并、不上传；远端若残留也一并剔除
+  const merged = mergeSyncData(syncableTasks(state.tasks), getTombstones(), syncableTasks(rd.tasks), rd.deleted);
   const remoteTotal = parseInt(rd.completedTotal || 0, 10) || 0;
   if(remoteTotal > getCompletedTotal()) localStorage.setItem(COMPLETED_COUNT_KEY, String(remoteTotal));
   const payload = {
@@ -2072,15 +2086,8 @@ function renderSyncModal(){
       + '<label class="sync-form-label">密码</label>'
       + '<input class="sync-form-input" id="acctPass" type="password" autocomplete="' + (isReg ? 'new-password' : 'current-password') + '" placeholder="至少 6 位">'
       + '</div>'
-      + (isReg
-          ? '<div class="sync-form-item">'
-            + '<label class="sync-form-label">邀请码</label>'
-            + '<input class="sync-form-input" id="acctInvite" placeholder="只有你和 TA 知道的那一串">'
-            + '<div class="sync-form-hint">第一次注册需要，用来拦住陌生人乱建账号。</div>'
-            + '</div>'
-          : '')
       + '<div class="sync-tip">' + (isReg
-          ? '注册好之后，把这组账号密码发给 TA。TA 在任何设备上登录，看到的都是同一份任务。'
+          ? '注册好之后，在别的设备上登录同一组账号密码，就能看到同一份任务。'
           : '还没注册过的话，点上面的「注册」建一个，只要十几秒。') + '</div>';
     footer.innerHTML = '<button class="btn btn-cancel" onclick="closeSyncModal()">关闭</button>'
       + '<button class="btn btn-save" onclick="submitAuth()">' + (isReg ? '注册并登录' : '登录') + '</button>';
@@ -2114,7 +2121,6 @@ function renderSyncModal(){
 async function submitAuth(){
   const uEl = document.getElementById('acctUser');
   const pEl = document.getElementById('acctPass');
-  const iEl = document.getElementById('acctInvite');
   const username = uEl ? uEl.value.trim() : '';
   const password = pEl ? pEl.value : '';
   if(!username || !password){ showToast('账号和密码都要填哦'); return; }
@@ -2125,15 +2131,14 @@ async function submitAuth(){
   renderSyncModal();
   try{
     const r = await apiCall('POST', isReg ? '/api/register' : '/api/login',
-      isReg
-        ? {username:username, password:password, invite:(iEl ? iEl.value.trim() : '')}
-        : {username:username, password:password});
+      {username:username, password:password});
     syncState.username = r.username || username;
     syncState.token = r.token;
     syncState.loggedIn = true;
     syncState.status = 'idle';
     syncState.message = '';
     syncState.mode = 'login';
+    try{ localStorage.setItem(HAD_ACCOUNT_KEY, '1'); }catch(e){}
     persistSyncConfig();
     renderSyncModal();
     const ok = await syncNow({silent:true});
@@ -2141,7 +2146,7 @@ async function submitAuth(){
     showToast(ok ? (isReg ? '账号已创建，数据已同步' : '登录成功，数据已同步') : (syncState.message || '登录成功'));
   }catch(e){
     syncState.status = 'error';
-    // 4xx 是"账号密码/邀请码"这类可以自己改的问题，直接把服务端的原话显示出来；
+    // 4xx 是"账号密码"这类可以自己改的问题，直接把服务端的原话显示出来；
     // 网络问题和 5xx 才用通用文案
     syncState.message = (e && e.status && e.status < 500) ? (e.message || '操作失败') : friendlySyncError(e);
     renderSyncModal();
@@ -2176,16 +2181,15 @@ function init(){
   loadTasks();
   loadSyncConfig();
   if(localStorage.getItem(COMPLETED_COUNT_KEY)===null){
-    localStorage.setItem(COMPLETED_COUNT_KEY, String(state.tasks.filter(t=>t.status==='completed').length));
+    localStorage.setItem(COMPLETED_COUNT_KEY, String(state.tasks.filter(t=>t.status==='completed' && !isDemoTask(t)).length));
   }
   bindEvents();
   render();
   if(syncState.loggedIn){
-    // 已登录：先把云端数据拉下来，确实为空才填示例任务
-    syncNow({silent:true}).then(()=>{
-      if(state.tasks.length===0){ addSampleTasks(); render(); }
-    });
-  } else if(state.tasks.length===0){
+    // 已登录：以账号里的数据为准
+    syncNow({silent:true});
+  } else if(state.tasks.length===0 && !localStorage.getItem(HAD_ACCOUNT_KEY)){
+    // 示例任务只在「从没用过账号、而且本机真的空」的设备上出现
     addSampleTasks();
     render();
   }

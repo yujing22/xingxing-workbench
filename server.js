@@ -359,8 +359,10 @@ const server = http.createServer(async (req, res) => {
       const password = String(body.password || '');
       if (!/^[a-z0-9_\-\u4e00-\u9fa5]{2,24}$/.test(username)) return send(res, 400, { error: '账号需为 2-24 位字母、数字、下划线或中文' });
       if (password.length < 6) return send(res, 400, { error: '密码至少 6 位' });
+      // 邀请码（可选开关）：server-secret.json 里的 registerInvite 留空 = 完全关闭注册门槛。
+      // 想重新开启，把 registerInvite 填成任意一串并重启即可。
       if (REGISTER_INVITE && String(body.invite || '').trim() !== REGISTER_INVITE) {
-        return send(res, 403, { error: '邀请码不对，问问 TA 要一下吧' });
+        return send(res, 403, { error: '邀请码不对' });
       }
 
       const salt = crypto.randomBytes(16).toString('hex');
