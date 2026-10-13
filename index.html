@@ -280,20 +280,26 @@ input,select,textarea{font-family:inherit;font-size:14px;outline:none}
 .cute-toast.long::before{content:none}
 
 /* ===== Cloud Sync ===== */
-.sync-bar{display:flex;align-items:center;gap:10px;padding:8px 16px;margin-bottom:20px;border-radius:var(--radius-sm);font-size:13px;transition:background .2s;cursor:pointer}
-.sync-bar.sync-off{background:#f0f9ff;border:1px solid #bae6fd}
-.sync-bar.sync-idle{background:var(--bg)}
-.sync-bar.sync-syncing{background:var(--warning-bg)}
-.sync-bar.sync-success{background:var(--success-bg)}
-.sync-bar.sync-error{background:var(--danger-bg)}
-.sync-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sync-status{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--radius-sm);font-size:13px;background:var(--bg);border:1px solid var(--border)}
+.sync-status.syncing{background:var(--warning-bg);border-color:#fcd34d}
+.sync-status.success{background:var(--success-bg);border-color:#6ee7b7}
+.sync-status.error{background:var(--danger-bg);border-color:#fca5a5}
+.sync-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;background:var(--text3)}
 .sync-dot.ok{background:var(--success)}
 .sync-dot.err{background:var(--danger)}
 .sync-dot.idle{background:var(--text3)}
-.sync-spinner{width:14px;height:14px;border:2px solid var(--warning);border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite}
+.sync-spinner{width:14px;height:14px;border:2px solid var(--warning);border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
-.sync-text{flex:1;color:var(--text2)}
-.sync-action{color:var(--primary);font-size:12px;padding:2px 8px}
+.sync-status-text{flex:1;color:var(--text2);line-height:1.5}
+.sync-code{width:100%;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;line-height:1.6;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text2);resize:none;word-break:break-all}
+.sync-code:focus{border-color:var(--primary);outline:none}
+.sync-btn-row{display:flex;gap:8px;margin-top:10px}
+.sync-mini-btn{flex:1;padding:9px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;background:var(--primary);color:#fff;transition:all .15s}
+.sync-mini-btn:hover{background:var(--primary-hover)}
+.sync-mini-btn.ghost{background:var(--bg);color:var(--text2);border:1px solid var(--border)}
+.sync-mini-btn.ghost:hover{background:var(--border);color:var(--text)}
+.sync-tip{font-size:12px;color:var(--text3);margin-top:6px;line-height:1.5}
+.sync-warn{background:#fffbeb;border:1px solid #fcd34d;border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;color:#92400e;line-height:1.5;margin-top:10px}
 
 /* Sync Modal */
 .sync-modal{width:460px;max-width:90vw}
@@ -452,6 +458,9 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
     background:var(--border2);
   }
   .sync-modal{width:100%;max-width:100%}
+  .sync-status{font-size:12px;padding:10px 12px}
+  .sync-code{font-size:10px;padding:9px 10px}
+  .sync-btn-row{flex-direction:column}
   .form-row{grid-template-columns:1fr 1fr;gap:8px}
   .form-row-3{grid-template-columns:1fr}
   .modal-body{padding:16px}
@@ -531,6 +540,7 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
     <div class="sidebar-footer">
       <button class="footer-btn" onclick="exportData()">导出</button>
       <button class="footer-btn" onclick="document.getElementById('importInput').click()">导入</button>
+      <button class="footer-btn" onclick="openSyncModal()">同步</button>
     </div>
   </aside>
 
@@ -538,6 +548,7 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
     <div class="mobile-actions">
       <button onclick="exportData()">📤 导出</button>
       <button onclick="document.getElementById('importInput').click()">📥 导入</button>
+      <button onclick="openSyncModal()">☁️ 同步</button>
     </div>
     <div id="view-dashboard" class="view active"></div>
     <div id="view-calendar" class="view"></div>
@@ -649,6 +660,19 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
   </div>
 </div>
 
+<div class="modal-overlay" id="syncModalOverlay">
+  <div class="modal sync-modal">
+    <div class="modal-header">
+      <div class="modal-title">数据同步</div>
+      <button class="modal-close" onclick="closeSyncModal()">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="syncModalBody"></div>
+    <div class="modal-footer" id="syncModalFooter"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 <div class="cute-toast" id="cuteToast"></div>
 <input type="file" id="importInput" accept=".json" style="display:none">
@@ -689,14 +713,22 @@ const state = {
 };
 
 /* ====== Storage ====== */
-const SYNC_CONFIG_KEY = 'starschedule-cloud-config';
-let cloudSync = {
+const SYNC_CONFIG_KEY = 'starschedule-sync-config-v2';
+const SYNC_TOMB_KEY = 'starschedule-sync-tombstones-v1';
+const SYNC_DEVICE_KEY = 'starschedule-sync-device-v1';
+const SYNC_FILE_PATH = 'sync.json';
+const SYNC_CODE_PREFIX = 'XY1.';
+let syncState = {
   enabled: false,
-  url: '',
-  syncKey: '',
-  state: 'idle', // idle | syncing | success | error
+  owner: '',
+  repo: '',
+  token: '',
+  status: 'idle', // idle | syncing | success | error
+  message: '',
+  lastSyncAt: null,
+  busy: false,
   pushTimer: null,
-  lastPushAt: 0
+  deviceId: ''
 };
 
 function loadTasks(){
@@ -707,7 +739,7 @@ function loadTasks(){
 }
 function saveTasks(){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state.tasks));
-  _debounceCloudPush();
+  debounceSyncPush();
 }
 
 /* ====== Utilities ====== */
@@ -1670,6 +1702,7 @@ function deleteCurrentTask(){
   }
 }
 function deleteTask(id){
+  markDeleted(id);
   state.tasks = state.tasks.filter(t=>t.id!==id);
   saveTasks();
   showToast('任务已删除');
@@ -1772,7 +1805,7 @@ function bindEvents(){
     }
     if((e.ctrlKey||e.metaKey) && e.key==='s'){
       e.preventDefault();
-      manualSync();
+      manualSyncNow();
     }
     if(e.altKey){
       const views = {'1':'dashboard','2':'calendar','3':'tasks','4':'stats','5':'archive'};
@@ -1787,208 +1820,335 @@ function bindEvents(){
   });
 }
 
-/* ====== Cloud Sync ====== */
-function loadCloudConfig(){
+/* ====== Cloud Sync (GitHub 私有仓库) ====== */
+function b64ToUtf8(b64){
+  const bin = atob(String(b64||'').replace(/\s/g,''));
+  const bytes = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+function utf8ToB64(str){
+  const bytes = new TextEncoder().encode(str);
+  let bin = '';
+  for(let i=0;i<bytes.length;i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+
+function loadSyncConfig(){
   try{
     const raw = localStorage.getItem(SYNC_CONFIG_KEY);
     if(raw){
-      const config = JSON.parse(raw);
-      cloudSync.url = config.url || '';
-      cloudSync.syncKey = config.syncKey || '';
-      cloudSync.enabled = !!(cloudSync.url && cloudSync.syncKey);
+      const c = JSON.parse(raw);
+      syncState.owner = c.owner || '';
+      syncState.repo = c.repo || '';
+      syncState.token = c.token || '';
+      syncState.lastSyncAt = c.lastSyncAt || null;
+      syncState.enabled = !!(syncState.owner && syncState.repo && syncState.token);
     }
   }catch(e){}
+  try{
+    let did = localStorage.getItem(SYNC_DEVICE_KEY);
+    if(!did){ did = uid(); localStorage.setItem(SYNC_DEVICE_KEY, did); }
+    syncState.deviceId = did;
+  }catch(e){ syncState.deviceId = 'dev'; }
+}
+function persistSyncConfig(){
+  try{
+    localStorage.setItem(SYNC_CONFIG_KEY, JSON.stringify({
+      owner: syncState.owner, repo: syncState.repo,
+      token: syncState.token, lastSyncAt: syncState.lastSyncAt
+    }));
+  }catch(e){}
+}
+function getTombstones(){
+  try{ return JSON.parse(localStorage.getItem(SYNC_TOMB_KEY) || '{}') || {}; }catch(e){ return {}; }
+}
+function setTombstones(obj){
+  try{ localStorage.setItem(SYNC_TOMB_KEY, JSON.stringify(obj || {})); }catch(e){}
+}
+function markDeleted(id){
+  const d = getTombstones();
+  d[id] = new Date().toISOString();
+  setTombstones(d);
 }
 
-function renderSyncBar(){
-  const container = document.getElementById('syncBarContainer');
-  if(!container) return;
+function encodeSyncCode(){
+  return SYNC_CODE_PREFIX + utf8ToB64(JSON.stringify({o:syncState.owner, r:syncState.repo, t:syncState.token}));
+}
+function applySyncCode(code){
+  const raw = String(code||'').replace(/\s+/g,'');
+  const body = raw.indexOf(SYNC_CODE_PREFIX)===0 ? raw.slice(SYNC_CODE_PREFIX.length) : raw;
+  const obj = JSON.parse(b64ToUtf8(body));
+  if(!obj || !obj.o || !obj.r || !obj.t) throw new Error('incomplete sync code');
+  syncState.owner = obj.o;
+  syncState.repo = obj.r;
+  syncState.token = obj.t;
+  syncState.enabled = true;
+  persistSyncConfig();
+}
 
-  if(!cloudSync.enabled){
-    container.innerHTML = `<div class="sync-bar sync-off" onclick="openSyncModal()">
-      <span>☁️</span>
-      <span class="sync-text">开启云同步，多端数据互通</span>
-      <span class="sync-action">去设置</span>
-    </div>`;
-    return;
+function syncApiUrl(){
+  return 'https://api.github.com/repos/' + syncState.owner + '/' + syncState.repo + '/contents/' + SYNC_FILE_PATH;
+}
+function friendlySyncError(e){
+  const msg = String((e && e.message) || e);
+  if(msg.indexOf('401')>=0) return '令牌无效或已过期，请断开后重新连接';
+  if(msg.indexOf('403')>=0) return '访问受限（可能触发 GitHub 频率限制），稍后重试';
+  if(msg.indexOf('404')>=0) return '找不到云端数据位置，请检查同步码';
+  if(msg.indexOf('409')>=0) return '云端刚被另一台设备更新，正在重试';
+  if(/Failed to fetch|NetworkError|Load failed|network/i.test(msg)) return '网络不通，稍后自动重试';
+  return '同步失败：' + msg;
+}
+
+async function fetchRemote(){
+  const res = await fetch(syncApiUrl() + '?_=' + Date.now(), {
+    headers:{'Authorization':'token ' + syncState.token, 'Accept':'application/vnd.github+json'},
+    cache:'no-store'
+  });
+  if(res.status===404) return {data:null, sha:null};
+  if(!res.ok) throw new Error('HTTP ' + res.status);
+  const j = await res.json();
+  let data = null;
+  try{ data = JSON.parse(b64ToUtf8(j.content)); }catch(e){ data = null; }
+  return {data:data, sha:j.sha};
+}
+
+async function pushRemote(payload, sha){
+  const body = {
+    message: '同步 ' + new Date().toISOString().slice(0,16).replace('T',' '),
+    content: utf8ToB64(JSON.stringify(payload))
+  };
+  if(sha) body.sha = sha;
+  const res = await fetch(syncApiUrl(), {
+    method:'PUT',
+    headers:{'Authorization':'token ' + syncState.token, 'Accept':'application/vnd.github+json', 'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  if(!res.ok){
+    let detail = '';
+    try{ detail = (await res.json()).message || ''; }catch(e){}
+    throw new Error('HTTP ' + res.status + (detail ? ' ' + detail : ''));
   }
-
-  const stateClass = cloudSync.state;
-  const stateText = cloudSync.state==='syncing' ? '同步中...' :
-    cloudSync.state==='success' ? '已同步' :
-    cloudSync.state==='error' ? '同步失败，点击重试' : '点击同步';
-
-  const dot = cloudSync.state==='syncing' ?
-    '<div class="sync-spinner"></div>' :
-    `<div class="sync-dot ${cloudSync.state==='success'?'ok':cloudSync.state==='error'?'err':'idle'}"></div>`;
-
-  container.innerHTML = `<div class="sync-bar sync-${stateClass}" onclick="manualSync()">
-    ${dot}
-    <span class="sync-text">${stateText}</span>
-    <span class="sync-action" onclick="event.stopPropagation();openSyncModal()">设置</span>
-  </div>`;
+  return res.json();
 }
 
+function taskStamp(t){
+  return t.updatedAt || t.createdAt || t.completedAt || '1970-01-01T00:00:00.000Z';
+}
+
+// 合并规则：同一任务取更新时间较新的一份；删除记录也取较新的，避免删掉的任务被另一台设备"复活"
+function mergeSyncData(localTasks, localDeleted, remoteTasks, remoteDeleted){
+  const deleted = {};
+  [remoteDeleted||{}, localDeleted||{}].forEach(src=>{
+    for(const k in src){ if(!deleted[k] || src[k] > deleted[k]) deleted[k] = src[k]; }
+  });
+  const best = {};
+  (remoteTasks||[]).concat(localTasks||[]).forEach(t=>{
+    if(!t || !t.id) return;
+    const st = taskStamp(t);
+    if(!best[t.id] || st > best[t.id].st) best[t.id] = {t:t, st:st};
+  });
+  const tasks = [];
+  for(const id in best){
+    const del = deleted[id];
+    if(del && del >= best[id].st) continue;
+    tasks.push(best[id].t);
+  }
+  return {tasks:tasks, deleted:deleted};
+}
+
+async function doSyncRound(attempt){
+  const remote = await fetchRemote();
+  const rd = (remote.data && typeof remote.data==='object') ? remote.data : {tasks:[], deleted:{}};
+  const merged = mergeSyncData(state.tasks, getTombstones(), rd.tasks, rd.deleted);
+  const before = JSON.stringify(state.tasks);
+  const after = JSON.stringify(merged.tasks);
+  const changed = before !== after;
+  state.tasks = merged.tasks;
+  localStorage.setItem(STORAGE_KEY, after);
+  setTombstones(merged.deleted);
+  const remoteTotal = parseInt(rd.completedTotal || 0, 10) || 0;
+  if(remoteTotal > getCompletedTotal()) localStorage.setItem(COMPLETED_COUNT_KEY, String(remoteTotal));
+  const payload = {
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    tasks: merged.tasks,
+    deleted: merged.deleted,
+    completedTotal: getCompletedTotal(),
+    device: syncState.deviceId
+  };
+  try{
+    await pushRemote(payload, remote.sha);
+  }catch(e){
+    if(attempt < 2){
+      await new Promise(r=>setTimeout(r, 400));
+      return doSyncRound(attempt+1);
+    }
+    throw e;
+  }
+  return {changed:changed, count:merged.tasks.length};
+}
+
+async function syncNow(opts){
+  opts = opts || {};
+  if(!syncState.enabled || syncState.busy) return false;
+  syncState.busy = true;
+  if(!opts.silent){ syncState.status='syncing'; syncState.message='正在同步…'; renderSyncModal(); }
+  let ok = false;
+  try{
+    const r = await doSyncRound(0);
+    syncState.status = 'success';
+    syncState.message = r.changed ? '已同步 · 本机更新为 ' + r.count + ' 条任务' : '已同步 · 两台设备数据一致';
+    syncState.lastSyncAt = new Date().toISOString();
+    persistSyncConfig();
+    if(r.changed) render();
+    ok = true;
+  }catch(e){
+    syncState.status = 'error';
+    syncState.message = friendlySyncError(e);
+    console.warn('同步失败:', e);
+  }
+  syncState.busy = false;
+  renderSyncModal();
+  return ok;
+}
+
+function debounceSyncPush(){
+  if(!syncState.enabled) return;
+  if(syncState.pushTimer) clearTimeout(syncState.pushTimer);
+  syncState.pushTimer = setTimeout(()=>{ syncNow({silent:true}); }, 2500);
+}
+
+/* ====== Sync UI ====== */
+function relativeSyncTime(iso){
+  const diff = Date.now() - new Date(iso).getTime();
+  if(isNaN(diff)) return '未知';
+  if(diff < 60000) return '刚刚';
+  if(diff < 3600000) return Math.floor(diff/60000) + ' 分钟前';
+  if(diff < 86400000) return Math.floor(diff/3600000) + ' 小时前';
+  return Math.floor(diff/86400000) + ' 天前';
+}
 function openSyncModal(){
-  document.getElementById('sync-url').value = cloudSync.url;
-  document.getElementById('sync-key').value = cloudSync.syncKey;
-  document.getElementById('syncClearBtn').style.display = cloudSync.enabled ? 'flex' : 'none';
-  document.getElementById('syncModalOverlay').classList.add('active');
+  const el = document.getElementById('syncModalOverlay');
+  if(!el) return;
+  renderSyncModal();
+  el.classList.add('active');
+  if(syncState.enabled && !syncState.busy) syncNow({silent:true});
 }
-
 function closeSyncModal(){
-  document.getElementById('syncModalOverlay').classList.remove('active');
+  const el = document.getElementById('syncModalOverlay');
+  if(el) el.classList.remove('active');
 }
+function renderSyncModal(){
+  const body = document.getElementById('syncModalBody');
+  const footer = document.getElementById('syncModalFooter');
+  if(!body || !footer) return;
 
-function saveSyncConfig(){
-  const url = document.getElementById('sync-url').value.trim();
-  const syncKey = document.getElementById('sync-key').value.trim();
-
-  if(!url){ showToast('请输入 HTTP 触发地址'); return; }
-  if(!syncKey){ showToast('请输入同步密钥'); return; }
-
-  localStorage.setItem(SYNC_CONFIG_KEY, JSON.stringify({url, syncKey}));
-  cloudSync.url = url;
-  cloudSync.syncKey = syncKey;
-  cloudSync.enabled = true;
-
-  closeSyncModal();
-  renderSyncBar();
-  showToast('配置已保存，开始同步...');
-  manualSync();
-}
-
-function _debounceCloudPush(){
-  if(!cloudSync.enabled) return;
-  if(cloudSync.pushTimer) clearTimeout(cloudSync.pushTimer);
-  cloudSync.pushTimer = setTimeout(()=>{ syncToCloud(); }, 2000);
-}
-
-async function syncToCloud(){
-  if(!cloudSync.enabled) return;
-  if(Date.now() - cloudSync.lastPushAt < 3000) return;
-  cloudSync.lastPushAt = Date.now();
-
-  cloudSync.state = 'syncing';
-  renderSyncBar();
-
-  try{
-    const res = await fetch(cloudSync.url, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        action: 'sync',
-        syncKey: cloudSync.syncKey,
-        localTasks: state.tasks
-      })
-    });
-    const result = await res.json();
-    if(result.ok){
-      state.tasks = result.tasks;
-      saveTasksLocal();
-      cloudSync.state = 'success';
-      render();
-    } else {
-      cloudSync.state = 'error';
-      console.error('同步失败:', result.error);
-    }
-  }catch(e){
-    cloudSync.state = 'error';
-    console.error('云端推送失败:', e);
-  }
-  renderSyncBar();
-}
-
-// Only save to local without triggering cloud push (used after cloud sync)
-function saveTasksLocal(){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.tasks));
-}
-
-async function syncFromCloud(silent){
-  if(!cloudSync.enabled) return;
-
-  if(!silent){
-    cloudSync.state = 'syncing';
-    renderSyncBar();
-  }
-
-  try{
-    const res = await fetch(cloudSync.url, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        action: 'sync',
-        syncKey: cloudSync.syncKey,
-        localTasks: state.tasks
-      })
-    });
-    const result = await res.json();
-    if(result.ok){
-      state.tasks = result.tasks;
-      saveTasksLocal();
-      cloudSync.state = 'success';
-      render();
-    } else {
-      cloudSync.state = 'error';
-    }
-  }catch(e){
-    console.error('云端拉取失败:', e);
-    cloudSync.state = silent ? 'idle' : 'error';
-  }
-  renderSyncBar();
-}
-
-async function manualSync(){
-  if(!cloudSync.enabled){
-    openSyncModal();
+  if(!syncState.enabled){
+    body.innerHTML = '<div class="sync-form-item">'
+      + '<label class="sync-form-label">同步码</label>'
+      + '<textarea class="sync-code" id="syncCodeInput" rows="3" placeholder="在这里粘贴同步码（XY1. 开头的一串字符）"></textarea>'
+      + '<div class="sync-tip">同步码把两台设备连在一起，只需要粘贴一次。</div>'
+      + '</div>'
+      + '<div class="sync-guide">'
+      + '<div class="sync-guide-title">怎么用</div>'
+      + '<div class="sync-guide-step"><div class="sync-guide-num">1</div><div>在已经连上的那台设备打开「同步」，复制里面的同步码</div></div>'
+      + '<div class="sync-guide-step"><div class="sync-guide-num">2</div><div>把同步码粘贴到上面的输入框</div></div>'
+      + '<div class="sync-guide-step"><div class="sync-guide-num">3</div><div>点「连接」，之后这台设备就会自动同步</div></div>'
+      + '</div>';
+    footer.innerHTML = '<button class="btn btn-cancel" onclick="closeSyncModal()">关闭</button>'
+      + '<button class="btn btn-save" onclick="connectWithCode()">连接</button>';
     return;
   }
-  await syncFromCloud(false);
-  if(cloudSync.state === 'success'){
-    showToast('同步成功');
-  } else if(cloudSync.state === 'error'){
-    showToast('同步失败，请检查配置');
+
+  const cls = syncState.status==='success' ? 'success' : syncState.status==='error' ? 'error' : syncState.status==='syncing' ? 'syncing' : '';
+  const dot = syncState.status==='syncing'
+    ? '<div class="sync-spinner"></div>'
+    : '<div class="sync-dot ' + (syncState.status==='success' ? 'ok' : syncState.status==='error' ? 'err' : 'idle') + '"></div>';
+  const text = syncState.message || '已连接';
+  const last = syncState.lastSyncAt ? relativeSyncTime(syncState.lastSyncAt) : '尚未同步';
+
+  body.innerHTML = '<div class="sync-status ' + cls + '">' + dot + '<div class="sync-status-text">' + escapeHtml(text)
+    + '<br><span style="font-size:12px;opacity:.75">上次同步：' + last + '</span></div></div>'
+    + '<div class="sync-form-item" style="margin-top:20px">'
+    + '<label class="sync-form-label">同步码（在其他设备粘贴这一串即可）</label>'
+    + '<textarea class="sync-code" id="syncCodeOut" rows="3" readonly onclick="this.select()">' + escapeHtml(encodeSyncCode()) + '</textarea>'
+    + '</div>'
+    + '<div class="sync-warn">同步码相当于你数据的钥匙，只在自己设备之间传递，不要发给别人。</div>';
+  footer.innerHTML = '<button class="btn btn-danger" style="margin-right:auto" onclick="disconnectSync()">断开</button>'
+    + '<button class="btn btn-cancel" onclick="closeSyncModal()">关闭</button>'
+    + '<button class="btn btn-save" onclick="manualSyncNow()">立即同步</button>';
+}
+
+async function connectWithCode(){
+  const ta = document.getElementById('syncCodeInput');
+  const code = ta ? ta.value.trim() : '';
+  if(!code){ showToast('请先粘贴同步码'); return; }
+  try{
+    applySyncCode(code);
+  }catch(e){
+    showToast('同步码格式不对，检查是否复制完整');
+    return;
+  }
+  syncState.status = 'syncing';
+  syncState.message = '正在连接…';
+  renderSyncModal();
+  const ok = await syncNow({silent:true});
+  if(ok){
+    showToast('连接成功，数据已同步');
+    render();
+  } else {
+    showToast(syncState.message || '连接失败，请检查同步码');
   }
 }
 
-async function clearCloudData(){
-  if(!confirm('确定清空云端所有任务数据吗？本地数据不受影响。')) return;
-  try{
-    const res = await fetch(cloudSync.url, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ action: 'clear', syncKey: cloudSync.syncKey })
-    });
-    const result = await res.json();
-    if(result.ok){
-      showToast(`已清空 ${result.cleared} 条云端数据`);
-      closeSyncModal();
-    } else {
-      showToast('清空失败');
-    }
-  }catch(e){
-    showToast('清空失败: ' + e.message);
-  }
+async function manualSyncNow(){
+  syncState.status = 'syncing';
+  syncState.message = '正在同步…';
+  renderSyncModal();
+  const ok = await syncNow({silent:true});
+  showToast(ok ? '同步完成' : (syncState.message || '同步失败'));
+}
+
+function disconnectSync(){
+  if(!confirm('断开后这台设备不再自动同步（本地数据会保留）。确定断开吗？')) return;
+  syncState.enabled = false;
+  syncState.owner = '';
+  syncState.repo = '';
+  syncState.token = '';
+  syncState.status = 'idle';
+  syncState.message = '';
+  syncState.lastSyncAt = null;
+  try{ localStorage.removeItem(SYNC_CONFIG_KEY); }catch(e){}
+  renderSyncModal();
+  showToast('已断开同步');
 }
 
 /* ====== Init ====== */
 function init(){
   loadTasks();
+  loadSyncConfig();
   if(localStorage.getItem(COMPLETED_COUNT_KEY)===null){
-    const c = state.tasks.filter(t=>t.status==='completed').length;
-    localStorage.setItem(COMPLETED_COUNT_KEY, String(c));
+    localStorage.setItem(COMPLETED_COUNT_KEY, String(state.tasks.filter(t=>t.status==='completed').length));
   }
-  if(state.tasks.length===0){
-    addSampleTasks();
-  }
-  loadCloudConfig();
-  renderSyncBar();
   bindEvents();
   render();
-  // 启动时静默拉取云端数据
-  if(cloudSync.enabled){
-    syncFromCloud(true);
+  if(syncState.enabled){
+    // 已连接同步：先把云端数据拉下来，确实为空才填示例任务
+    syncNow({silent:true}).then(()=>{
+      if(state.tasks.length===0){ addSampleTasks(); render(); }
+    });
+  } else if(state.tasks.length===0){
+    addSampleTasks();
+    render();
   }
+  // 从后台切回前台时补一次同步
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState==='visible' && syncState.enabled && !syncState.busy){
+      const last = syncState.lastSyncAt ? new Date(syncState.lastSyncAt).getTime() : 0;
+      if(Date.now() - last > 20000) syncNow({silent:true});
+    }
+  });
 }
 
 init();
