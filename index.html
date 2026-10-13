@@ -300,23 +300,18 @@ input,select,textarea{font-family:inherit;font-size:14px;outline:none}
 .sync-mini-btn.ghost:hover{background:var(--border);color:var(--text)}
 .sync-tip{font-size:12px;color:var(--text3);margin-top:6px;line-height:1.5}
 .sync-warn{background:#fffbeb;border:1px solid #fcd34d;border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;color:#92400e;line-height:1.5;margin-top:10px}
-/* 给 TA 开一份独立空间 */
-.sync-invite{margin-top:16px;padding:14px;border:1px dashed var(--border2);border-radius:var(--radius-sm);background:var(--bg)}
-.sync-invite-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px}
-.sync-invite-desc{font-size:12px;color:var(--text3);line-height:1.5;margin-bottom:10px}
-.sync-invite-row{display:flex;gap:8px}
-.sync-invite-row input{flex:1;min-width:0;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--card);color:var(--text)}
-.sync-invite-row input:focus{outline:none;border-color:var(--primary)}
-.sync-invite-row button{flex-shrink:0;padding:8px 16px;border:none;border-radius:var(--radius-sm);background:var(--primary);color:#fff;font-size:13px;font-weight:500;cursor:pointer}
-.sync-invite-row button:active{background:var(--primary-hover)}
-.sync-invite-out{margin-top:10px}
+/* 账号登录 / 注册 */
+.sync-lead{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:16px}
+.sync-tabs{display:flex;gap:6px;padding:4px;background:var(--bg);border-radius:var(--radius-sm);margin-bottom:18px}
+.sync-tab{flex:1;padding:8px 0;border:none;border-radius:calc(var(--radius-sm) - 2px);background:transparent;color:var(--text3);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s}
+.sync-tab.active{background:var(--card);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.06)}
 
 /* Sync Modal */
 .sync-modal{width:460px;max-width:90vw}
 .sync-modal .modal-body{padding:24px}
 .sync-form-item{margin-bottom:20px}
 .sync-form-label{display:block;font-size:13px;font-weight:500;margin-bottom:6px;color:var(--text)}
-.sync-form-input{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;transition:border .15s}
+.sync-form-input{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:var(--card);color:var(--text);transition:border .15s}
 .sync-form-input:focus{border-color:var(--primary)}
 .sync-form-hint{font-size:12px;color:var(--text3);margin-top:4px}
 .sync-guide{background:var(--bg);border-radius:var(--radius-sm);padding:16px;margin-top:16px}
@@ -470,8 +465,8 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
   .sync-modal{width:100%;max-width:100%}
   .sync-status{font-size:12px;padding:10px 12px}
   .sync-code{font-size:10px;padding:9px 10px}
-  .sync-invite{padding:12px}
-  .sync-invite-row button{padding:8px 12px}
+  .sync-form-input{font-size:16px}
+  .sync-lead{font-size:12px}
   .sync-btn-row{flex-direction:column}
   .form-row{grid-template-columns:1fr 1fr;gap:8px}
   .form-row-3{grid-template-columns:1fr}
@@ -675,7 +670,7 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
 <div class="modal-overlay" id="syncModalOverlay">
   <div class="modal sync-modal">
     <div class="modal-header">
-      <div class="modal-title">数据同步</div>
+      <div class="modal-title">账号与同步</div>
       <button class="modal-close" onclick="closeSyncModal()">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
@@ -725,24 +720,15 @@ const state = {
 };
 
 /* ====== Storage ====== */
-const SYNC_CONFIG_KEY = 'starschedule-sync-config-v2';
+const SYNC_ACCOUNT_KEY = 'starschedule-account-v1';   // 登录状态（账号 + 会话令牌）
 const SYNC_TOMB_KEY = 'starschedule-sync-tombstones-v1';
 const SYNC_DEVICE_KEY = 'starschedule-sync-device-v1';
-const SYNC_FILE_PATH = 'sync.json';           // 旧版（无空间）用的路径，保持兼容
-const SYNC_SPACE_DIR = 'spaces';               // 每个空间一个文件：spaces/<slug>.json
-const SYNC_CODE_PREFIX = 'XY2.';
-const SYNC_CODE_PREFIX_V1 = 'XY1.';
-const SYNC_INVITE_KEY = 'starschedule-sync-invite-v1';
 let syncState = {
-  enabled: false,
-  owner: '',
-  repo: '',
-  token: '',
-  space: '',        // 空间 slug，空 = 旧版主空间（sync.json）
-  spaceName: '',    // 空间的显示名（只影响界面，不影响存储路径）
-  inviteCode: '',   // 最近一次为 TA 生成的空间码
-  inviteName: '',   // 生成邀请码时填的空间名（仅用于回填输入框）
-  status: 'idle', // idle | syncing | success | error
+  username: '',      // 当前登录的账号
+  token: '',         // 服务端签发的会话令牌
+  loggedIn: false,
+  mode: 'login',     // 弹窗模式：login | register
+  status: 'idle',    // idle | syncing | success | error
   message: '',
   lastSyncAt: null,
   busy: false,
@@ -1839,35 +1825,25 @@ function bindEvents(){
   });
 }
 
-/* ====== Cloud Sync (GitHub 私有仓库) ====== */
-function b64ToUtf8(b64){
-  const bin = atob(String(b64||'').replace(/\s/g,''));
-  const bytes = new Uint8Array(bin.length);
-  for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
-  return new TextDecoder().decode(bytes);
-}
-function utf8ToB64(str){
-  const bytes = new TextEncoder().encode(str);
-  let bin = '';
-  for(let i=0;i<bytes.length;i++) bin += String.fromCharCode(bytes[i]);
-  return btoa(bin);
-}
+/* ====== Account & Sync（自建账号服务 + 私有仓库存储） ====== */
+// 账号服务地址：如果页面本身就是它提供的，就走相对路径（同源，无需跨域）
+const SYNC_API_SELF = 'https://497e8f52aa7445bb8784602a4b9628e4.app.workbuddy.link';
+const SYNC_API_BASE = (function(){
+  try{ return (location.origin === SYNC_API_SELF) ? '' : SYNC_API_SELF; }
+  catch(e){ return SYNC_API_SELF; }
+})();
 
 function loadSyncConfig(){
   try{
-    const raw = localStorage.getItem(SYNC_CONFIG_KEY);
+    const raw = localStorage.getItem(SYNC_ACCOUNT_KEY);
     if(raw){
       const c = JSON.parse(raw);
-      syncState.owner = c.owner || '';
-      syncState.repo = c.repo || '';
+      syncState.username = c.username || '';
       syncState.token = c.token || '';
-      syncState.space = c.space || '';
-      syncState.spaceName = c.spaceName || '';
       syncState.lastSyncAt = c.lastSyncAt || null;
-      syncState.enabled = !!(syncState.owner && syncState.repo && syncState.token);
+      syncState.loggedIn = !!(syncState.username && syncState.token);
     }
   }catch(e){}
-  try{ syncState.inviteCode = localStorage.getItem(SYNC_INVITE_KEY) || ''; }catch(e){}
   try{
     let did = localStorage.getItem(SYNC_DEVICE_KEY);
     if(!did){ did = uid(); localStorage.setItem(SYNC_DEVICE_KEY, did); }
@@ -1876,22 +1852,14 @@ function loadSyncConfig(){
 }
 function persistSyncConfig(){
   try{
-    localStorage.setItem(SYNC_CONFIG_KEY, JSON.stringify({
-      owner: syncState.owner, repo: syncState.repo,
-      token: syncState.token, space: syncState.space,
-      spaceName: syncState.spaceName, lastSyncAt: syncState.lastSyncAt
-    }));
+    if(syncState.loggedIn){
+      localStorage.setItem(SYNC_ACCOUNT_KEY, JSON.stringify({
+        username: syncState.username, token: syncState.token, lastSyncAt: syncState.lastSyncAt
+      }));
+    } else {
+      localStorage.removeItem(SYNC_ACCOUNT_KEY);
+    }
   }catch(e){}
-}
-function persistInviteCode(code){
-  syncState.inviteCode = code || '';
-  try{
-    if(code) localStorage.setItem(SYNC_INVITE_KEY, code);
-    else localStorage.removeItem(SYNC_INVITE_KEY);
-  }catch(e){}
-}
-function spaceLabel(){
-  return syncState.spaceName || (syncState.space ? '我的空间' : '主空间');
 }
 function getTombstones(){
   try{ return JSON.parse(localStorage.getItem(SYNC_TOMB_KEY) || '{}') || {}; }catch(e){ return {}; }
@@ -1905,89 +1873,55 @@ function markDeleted(id){
   setTombstones(d);
 }
 
-function encodeSyncCode(){
-  return SYNC_CODE_PREFIX + utf8ToB64(JSON.stringify({
-    o:syncState.owner, r:syncState.repo, t:syncState.token,
-    s:syncState.space, n:syncState.spaceName
-  }));
-}
-function newSpaceSlug(){
-  const chars = 'abcdefghijkmnpqrstuvwxyz23456789';
-  let s = '';
-  for(let i=0;i<10;i++) s += chars[Math.floor(Math.random()*chars.length)];
-  return s;
-}
-// 用同一套账号凭证、换一个空间，生成给 TA 的码（不切走自己当前的空间）
-function buildSpaceCode(space, name){
-  return SYNC_CODE_PREFIX + utf8ToB64(JSON.stringify({
-    o:syncState.owner, r:syncState.repo, t:syncState.token, s:space, n:name
-  }));
-}
-function applySyncCode(code){
-  const raw = String(code||'').replace(/\s+/g,'');
-  let body = raw;
-  if(raw.indexOf(SYNC_CODE_PREFIX)===0) body = raw.slice(SYNC_CODE_PREFIX.length);
-  else if(raw.indexOf(SYNC_CODE_PREFIX_V1)===0) body = raw.slice(SYNC_CODE_PREFIX_V1.length);
-  const obj = JSON.parse(b64ToUtf8(body));
-  if(!obj || !obj.o || !obj.r || !obj.t) throw new Error('incomplete sync code');
-  const prevSpace = syncState.space;
-  syncState.owner = obj.o;
-  syncState.repo = obj.r;
-  syncState.token = obj.t;
-  syncState.space = obj.s || '';        // 旧版码没有空间字段 → 沿用主空间
-  syncState.spaceName = obj.n || '';
-  syncState.enabled = true;
-  // 换了空间：清掉旧的删除记录，避免误删新空间里同名的任务
-  if(prevSpace !== syncState.space) setTombstones({});
-  persistSyncConfig();
+/* ---- 与账号服务通信 ---- */
+async function apiCall(method, path, body){
+  const headers = {'Accept':'application/json'};
+  if(body) headers['Content-Type'] = 'application/json';
+  if(syncState.token){
+    // 自定义头优先：部署环境的反向代理会自己塞一个 Authorization，会顶掉我们的令牌
+    headers['X-Xing-Token'] = syncState.token;
+    headers['Authorization'] = 'Bearer ' + syncState.token;
+  }
+  let res;
+  try{
+    res = await fetch(SYNC_API_BASE + path, {
+      method: method, headers: headers,
+      body: body ? JSON.stringify(body) : undefined,
+      cache: 'no-store'
+    });
+  }catch(e){
+    const err = new Error('连不上同步服务，检查一下网络');
+    err.offline = true;
+    throw err;
+  }
+  let json = null;
+  try{ json = await res.json(); }catch(e){}
+  if(!res.ok){
+    const err = new Error((json && json.error) || ('服务返回 HTTP ' + res.status));
+    err.status = res.status;
+    throw err;
+  }
+  return json;
 }
 
-function syncFilePath(){
-  return syncState.space ? (SYNC_SPACE_DIR + '/' + syncState.space + '.json') : SYNC_FILE_PATH;
-}
-function syncApiUrl(){
-  return 'https://api.github.com/repos/' + syncState.owner + '/' + syncState.repo + '/contents/' + syncFilePath();
-}
 function friendlySyncError(e){
   const msg = String((e && e.message) || e);
-  if(msg.indexOf('401')>=0) return '令牌无效或已过期，请断开后重新连接';
-  if(msg.indexOf('403')>=0) return '访问受限（可能触发 GitHub 频率限制），稍后重试';
-  if(msg.indexOf('404')>=0) return '找不到云端数据位置，请检查同步码';
-  if(msg.indexOf('409')>=0) return '云端刚被另一台设备更新，正在重试';
+  const st = e && e.status;
+  if(st === 401) return '登录已过期，请重新登录';
+  if(st === 403) return msg;
+  if(st === 429) return msg;
+  if(st >= 500) return '服务暂时不可用，稍后自动重试';
   if(/Failed to fetch|NetworkError|Load failed|network/i.test(msg)) return '网络不通，稍后自动重试';
-  return '同步失败：' + msg;
+  return msg;
 }
 
 async function fetchRemote(){
-  const res = await fetch(syncApiUrl() + '?_=' + Date.now(), {
-    headers:{'Authorization':'token ' + syncState.token, 'Accept':'application/vnd.github+json'},
-    cache:'no-store'
-  });
-  if(res.status===404) return {data:null, sha:null};
-  if(!res.ok) throw new Error('HTTP ' + res.status);
-  const j = await res.json();
-  let data = null;
-  try{ data = JSON.parse(b64ToUtf8(j.content)); }catch(e){ data = null; }
-  return {data:data, sha:j.sha};
+  const d = await apiCall('GET', '/api/state');
+  return { data: (d && typeof d === 'object') ? d : null };
 }
 
-async function pushRemote(payload, sha){
-  const body = {
-    message: '同步 ' + new Date().toISOString().slice(0,16).replace('T',' '),
-    content: utf8ToB64(JSON.stringify(payload))
-  };
-  if(sha) body.sha = sha;
-  const res = await fetch(syncApiUrl(), {
-    method:'PUT',
-    headers:{'Authorization':'token ' + syncState.token, 'Accept':'application/vnd.github+json', 'Content-Type':'application/json'},
-    body: JSON.stringify(body)
-  });
-  if(!res.ok){
-    let detail = '';
-    try{ detail = (await res.json()).message || ''; }catch(e){}
-    throw new Error('HTTP ' + res.status + (detail ? ' ' + detail : ''));
-  }
-  return res.json();
+async function pushRemote(payload){
+  return await apiCall('PUT', '/api/state', payload);
 }
 
 function taskStamp(t){
@@ -2019,12 +1953,6 @@ async function doSyncRound(attempt){
   const remote = await fetchRemote();
   const rd = (remote.data && typeof remote.data==='object') ? remote.data : {tasks:[], deleted:{}};
   const merged = mergeSyncData(state.tasks, getTombstones(), rd.tasks, rd.deleted);
-  const before = JSON.stringify(state.tasks);
-  const after = JSON.stringify(merged.tasks);
-  const changed = before !== after;
-  state.tasks = merged.tasks;
-  localStorage.setItem(STORAGE_KEY, after);
-  setTombstones(merged.deleted);
   const remoteTotal = parseInt(rd.completedTotal || 0, 10) || 0;
   if(remoteTotal > getCompletedTotal()) localStorage.setItem(COMPLETED_COUNT_KEY, String(remoteTotal));
   const payload = {
@@ -2035,21 +1963,32 @@ async function doSyncRound(attempt){
     completedTotal: getCompletedTotal(),
     device: syncState.deviceId
   };
+  let result = null;
   try{
-    await pushRemote(payload, remote.sha);
+    // 服务端同样做一次并集合并（并发的两台设备也不会互相覆盖），以它返回的结果为准
+    result = await pushRemote(payload);
   }catch(e){
-    if(attempt < 2){
-      await new Promise(r=>setTimeout(r, 400));
+    if(attempt < 2 && !(e && e.status && e.status < 500)){
+      await new Promise(r=>setTimeout(r, 500));
       return doSyncRound(attempt+1);
     }
     throw e;
   }
-  return {changed:changed, count:merged.tasks.length};
+  const final = (result && Array.isArray(result.tasks)) ? result : merged;
+  const before = JSON.stringify(state.tasks);
+  const after = JSON.stringify(final.tasks);
+  const changed = before !== after;
+  state.tasks = final.tasks;
+  localStorage.setItem(STORAGE_KEY, after);
+  setTombstones(final.deleted || {});
+  const total = parseInt(final.completedTotal || 0, 10) || 0;
+  if(total > getCompletedTotal()) localStorage.setItem(COMPLETED_COUNT_KEY, String(total));
+  return {changed:changed, count:final.tasks.length};
 }
 
 async function syncNow(opts){
   opts = opts || {};
-  if(!syncState.enabled || syncState.busy) return false;
+  if(!syncState.loggedIn || syncState.busy) return false;
   syncState.busy = true;
   if(!opts.silent){ syncState.status='syncing'; syncState.message='正在同步…'; renderSyncModal(); }
   let ok = false;
@@ -2064,6 +2003,7 @@ async function syncNow(opts){
   }catch(e){
     syncState.status = 'error';
     syncState.message = friendlySyncError(e);
+    if(e && e.status === 401){ syncState.loggedIn = false; persistSyncConfig(); }
     console.warn('同步失败:', e);
   }
   syncState.busy = false;
@@ -2072,7 +2012,7 @@ async function syncNow(opts){
 }
 
 function debounceSyncPush(){
-  if(!syncState.enabled) return;
+  if(!syncState.loggedIn) return;
   if(syncState.pushTimer) clearTimeout(syncState.pushTimer);
   syncState.pushTimer = setTimeout(()=>{ syncNow({silent:true}); }, 2500);
 }
@@ -2091,100 +2031,136 @@ function openSyncModal(){
   if(!el) return;
   renderSyncModal();
   el.classList.add('active');
-  if(syncState.enabled && !syncState.busy) syncNow({silent:true});
+  if(syncState.loggedIn && !syncState.busy) syncNow({silent:true});
 }
 function closeSyncModal(){
   const el = document.getElementById('syncModalOverlay');
   if(el) el.classList.remove('active');
 }
+function switchSyncMode(mode){
+  syncState.mode = (mode === 'register') ? 'register' : 'login';
+  syncState.status = 'idle';
+  syncState.message = '';
+  renderSyncModal();
+}
+function accountLabel(){
+  return syncState.username || '未登录';
+}
+
 function renderSyncModal(){
   const body = document.getElementById('syncModalBody');
   const footer = document.getElementById('syncModalFooter');
   if(!body || !footer) return;
 
-  if(!syncState.enabled){
-    body.innerHTML = '<div class="sync-form-item">'
-      + '<label class="sync-form-label">同步码</label>'
-      + '<textarea class="sync-code" id="syncCodeInput" rows="3" placeholder="在这里粘贴同步码（XY2. 开头的一串字符）"></textarea>'
-      + '<div class="sync-tip">同步码把设备连在一起，只需要粘贴一次。</div>'
+  /* ---------- 未登录：登录 / 注册 ---------- */
+  if(!syncState.loggedIn){
+    const isReg = syncState.mode === 'register';
+    const err = (syncState.status === 'error' && syncState.message)
+      ? '<div class="sync-status error"><div class="sync-dot err"></div><div class="sync-status-text">' + escapeHtml(syncState.message) + '</div></div>'
+      : '';
+    body.innerHTML = err
+      + '<div class="sync-lead">登录同一个账号，你的电脑和手机就会看到同一份任务。</div>'
+      + '<div class="sync-tabs">'
+      + '<button class="sync-tab' + (!isReg ? ' active' : '') + '" onclick="switchSyncMode(\'login\')">登录</button>'
+      + '<button class="sync-tab' + (isReg ? ' active' : '') + '" onclick="switchSyncMode(\'register\')">注册</button>'
       + '</div>'
-      + '<div class="sync-guide">'
-      + '<div class="sync-guide-title">怎么用</div>'
-      + '<div class="sync-guide-step"><div class="sync-guide-num">1</div><div>在已经连上的那台设备打开「同步」，复制里面的同步码</div></div>'
-      + '<div class="sync-guide-step"><div class="sync-guide-num">2</div><div>把同步码粘贴到上面的输入框</div></div>'
-      + '<div class="sync-guide-step"><div class="sync-guide-num">3</div><div>点「连接」，之后这台设备就会自动同步</div></div>'
+      + '<div class="sync-form-item">'
+      + '<label class="sync-form-label">账号</label>'
+      + '<input class="sync-form-input" id="acctUser" autocomplete="username" placeholder="2-24 位，字母 / 数字 / 中文">'
       + '</div>'
-      + '<div class="sync-tip" style="margin-top:14px">💡 两个人用的话，每个人有自己独立的一份同步码：你粘你的，TA 粘 TA 的，任务各归各、互不干扰。</div>';
+      + '<div class="sync-form-item">'
+      + '<label class="sync-form-label">密码</label>'
+      + '<input class="sync-form-input" id="acctPass" type="password" autocomplete="' + (isReg ? 'new-password' : 'current-password') + '" placeholder="至少 6 位">'
+      + '</div>'
+      + (isReg
+          ? '<div class="sync-form-item">'
+            + '<label class="sync-form-label">邀请码</label>'
+            + '<input class="sync-form-input" id="acctInvite" placeholder="只有你和 TA 知道的那一串">'
+            + '<div class="sync-form-hint">第一次注册需要，用来拦住陌生人乱建账号。</div>'
+            + '</div>'
+          : '')
+      + '<div class="sync-tip">' + (isReg
+          ? '注册好之后，把这组账号密码发给 TA。TA 在任何设备上登录，看到的都是同一份任务。'
+          : '还没注册过的话，点上面的「注册」建一个，只要十几秒。') + '</div>';
     footer.innerHTML = '<button class="btn btn-cancel" onclick="closeSyncModal()">关闭</button>'
-      + '<button class="btn btn-save" onclick="connectWithCode()">连接</button>';
+      + '<button class="btn btn-save" onclick="submitAuth()">' + (isReg ? '注册并登录' : '登录') + '</button>';
+    const passEl = document.getElementById('acctPass');
+    if(passEl) passEl.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') submitAuth(); });
     return;
   }
 
+  /* ---------- 已登录 ---------- */
   const cls = syncState.status==='success' ? 'success' : syncState.status==='error' ? 'error' : syncState.status==='syncing' ? 'syncing' : '';
   const dot = syncState.status==='syncing'
     ? '<div class="sync-spinner"></div>'
     : '<div class="sync-dot ' + (syncState.status==='success' ? 'ok' : syncState.status==='error' ? 'err' : 'idle') + '"></div>';
-  const text = syncState.message || '已连接';
+  const text = syncState.message || '已登录';
   const last = syncState.lastSyncAt ? relativeSyncTime(syncState.lastSyncAt) : '尚未同步';
 
-  const inviteOut = syncState.inviteCode
-    ? '<div class="sync-invite-out">'
-      + '<textarea class="sync-code" id="inviteCodeOut" rows="3" readonly onclick="this.select()">' + escapeHtml(syncState.inviteCode) + '</textarea>'
-      + '<div class="sync-tip">把这一串发给 TA。TA 的第一台设备粘贴连接，第二台设备再从第一台复制这段码即可。</div>'
-      + '</div>'
-    : '';
-
   body.innerHTML = '<div class="sync-status ' + cls + '">' + dot + '<div class="sync-status-text">' + escapeHtml(text)
-    + '<br><span style="font-size:12px;opacity:.75">当前空间：' + escapeHtml(spaceLabel()) + ' ｜ 上次同步：' + last + '</span></div></div>'
-    + '<div class="sync-form-item" style="margin-top:20px">'
-    + '<label class="sync-form-label">我的同步码（在同一个人其他设备粘贴这一串即可）</label>'
-    + '<textarea class="sync-code" id="syncCodeOut" rows="3" readonly onclick="this.select()">' + escapeHtml(encodeSyncCode()) + '</textarea>'
+    + '<br><span style="font-size:12px;opacity:.75">账号：' + escapeHtml(accountLabel()) + ' ｜ 上次同步：' + last + '</span></div></div>'
+    + '<div class="sync-guide">'
+    + '<div class="sync-guide-title">怎么让另一台设备也同步</div>'
+    + '<div class="sync-guide-step"><div class="sync-guide-num">1</div><div>在另一台设备上打开同一个网址</div></div>'
+    + '<div class="sync-guide-step"><div class="sync-guide-num">2</div><div>输入同一组账号和密码，点「登录」</div></div>'
+    + '<div class="sync-guide-step"><div class="sync-guide-num">3</div><div>之后两边自动同步，改动约 3 秒后送达</div></div>'
     + '</div>'
-    + '<div class="sync-invite">'
-    + '<div class="sync-invite-title">给 TA 开一份独立的</div>'
-    + '<div class="sync-invite-desc">生成一串属于 TA 的同步码。TA 的手机和电脑都用这一串，数据和你完全分开 —— 互相看不到，也不会覆盖彼此的任务。</div>'
-    + '<div class="sync-invite-row">'
-    + '<input id="inviteName" value="' + escapeHtml(syncState.inviteName || '') + '" placeholder="TA 的空间名，例如：宝贝" maxlength="12">'
-    + '<button onclick="createInviteCode()">生成</button>'
-    + '</div>'
-    + inviteOut
-    + '</div>'
-    + '<div class="sync-warn">同步码相当于数据的钥匙，只在自己人之间传递，不要发给别人。</div>';
-  footer.innerHTML = '<button class="btn btn-danger" style="margin-right:auto" onclick="disconnectSync()">断开</button>'
+    + '<div class="sync-warn">任务存在你自己的私有仓库里，只有登录这个账号的设备能看到。账号密码别发给外人。</div>';
+  footer.innerHTML = '<button class="btn btn-danger" style="margin-right:auto" onclick="doLogout()">退出登录</button>'
     + '<button class="btn btn-cancel" onclick="closeSyncModal()">关闭</button>'
     + '<button class="btn btn-save" onclick="manualSyncNow()">立即同步</button>';
 }
 
-function createInviteCode(){
-  if(!syncState.enabled){ showToast('请先连接同步'); return; }
-  const el = document.getElementById('inviteName');
-  const name = el ? el.value.trim() : '';
-  syncState.inviteName = name;
-  persistInviteCode(buildSpaceCode(newSpaceSlug(), name || 'TA 的空间'));
+async function submitAuth(){
+  const uEl = document.getElementById('acctUser');
+  const pEl = document.getElementById('acctPass');
+  const iEl = document.getElementById('acctInvite');
+  const username = uEl ? uEl.value.trim() : '';
+  const password = pEl ? pEl.value : '';
+  if(!username || !password){ showToast('账号和密码都要填哦'); return; }
+  const isReg = syncState.mode === 'register';
+  if(isReg && password.length < 6){ showToast('密码至少 6 位'); return; }
+  syncState.status = 'syncing';
+  syncState.message = isReg ? '正在注册…' : '正在登录…';
   renderSyncModal();
-  showToast('已生成，复制发给 TA 吧');
+  try{
+    const r = await apiCall('POST', isReg ? '/api/register' : '/api/login',
+      isReg
+        ? {username:username, password:password, invite:(iEl ? iEl.value.trim() : '')}
+        : {username:username, password:password});
+    syncState.username = r.username || username;
+    syncState.token = r.token;
+    syncState.loggedIn = true;
+    syncState.status = 'idle';
+    syncState.message = '';
+    syncState.mode = 'login';
+    persistSyncConfig();
+    renderSyncModal();
+    const ok = await syncNow({silent:true});
+    render();
+    showToast(ok ? (isReg ? '账号已创建，数据已同步' : '登录成功，数据已同步') : (syncState.message || '登录成功'));
+  }catch(e){
+    syncState.status = 'error';
+    // 4xx 是"账号密码/邀请码"这类可以自己改的问题，直接把服务端的原话显示出来；
+    // 网络问题和 5xx 才用通用文案
+    syncState.message = (e && e.status && e.status < 500) ? (e.message || '操作失败') : friendlySyncError(e);
+    renderSyncModal();
+    showToast(syncState.message);
+  }
 }
 
-async function connectWithCode(){
-  const ta = document.getElementById('syncCodeInput');
-  const code = ta ? ta.value.trim() : '';
-  if(!code){ showToast('请先粘贴同步码'); return; }
-  try{
-    applySyncCode(code);
-  }catch(e){
-    showToast('同步码格式不对，检查是否复制完整');
-    return;
-  }
-  syncState.status = 'syncing';
-  syncState.message = '正在连接…';
+function doLogout(){
+  if(!confirm('退出登录后这台设备不再自动同步（本地任务会保留）。确定退出吗？')) return;
+  syncState.loggedIn = false;
+  syncState.username = '';
+  syncState.token = '';
+  syncState.status = 'idle';
+  syncState.message = '';
+  syncState.lastSyncAt = null;
+  syncState.mode = 'login';
+  persistSyncConfig();
   renderSyncModal();
-  const ok = await syncNow({silent:true});
-  if(ok){
-    showToast('连接成功，数据已同步');
-    render();
-  } else {
-    showToast(syncState.message || '连接失败，请检查同步码');
-  }
+  showToast('已退出登录');
 }
 
 async function manualSyncNow(){
@@ -2193,22 +2169,6 @@ async function manualSyncNow(){
   renderSyncModal();
   const ok = await syncNow({silent:true});
   showToast(ok ? '同步完成' : (syncState.message || '同步失败'));
-}
-
-function disconnectSync(){
-  if(!confirm('断开后这台设备不再自动同步（本地数据会保留）。确定断开吗？')) return;
-  syncState.enabled = false;
-  syncState.owner = '';
-  syncState.repo = '';
-  syncState.token = '';
-  syncState.space = '';
-  syncState.spaceName = '';
-  syncState.status = 'idle';
-  syncState.message = '';
-  syncState.lastSyncAt = null;
-  try{ localStorage.removeItem(SYNC_CONFIG_KEY); }catch(e){}
-  renderSyncModal();
-  showToast('已断开同步');
 }
 
 /* ====== Init ====== */
@@ -2220,8 +2180,8 @@ function init(){
   }
   bindEvents();
   render();
-  if(syncState.enabled){
-    // 已连接同步：先把云端数据拉下来，确实为空才填示例任务
+  if(syncState.loggedIn){
+    // 已登录：先把云端数据拉下来，确实为空才填示例任务
     syncNow({silent:true}).then(()=>{
       if(state.tasks.length===0){ addSampleTasks(); render(); }
     });
@@ -2231,7 +2191,7 @@ function init(){
   }
   // 从后台切回前台时补一次同步
   document.addEventListener('visibilitychange', ()=>{
-    if(document.visibilityState==='visible' && syncState.enabled && !syncState.busy){
+    if(document.visibilityState==='visible' && syncState.loggedIn && !syncState.busy){
       const last = syncState.lastSyncAt ? new Date(syncState.lastSyncAt).getTime() : 0;
       if(Date.now() - last > 20000) syncNow({silent:true});
     }
