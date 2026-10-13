@@ -168,6 +168,8 @@ input,select,textarea{font-family:inherit;font-size:14px;outline:none}
 .task-checkbox.checked svg{width:12px;height:12px;color:#fff}
 .task-title{font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .task-desc{font-size:12px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.task-completed-at{display:inline-flex;align-items:center;gap:3px;font-size:12px;color:var(--success);margin-top:3px;white-space:nowrap}
+.task-completed-at svg{width:11px;height:11px;flex:none}
 .task-actions{display:flex;gap:8px;justify-content:center}
 .task-action-btn{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--text2)}
 .task-action-btn:hover{background:var(--bg)}
@@ -239,6 +241,7 @@ input,select,textarea{font-family:inherit;font-size:14px;outline:none}
 .form-label{display:block;font-size:13px;font-weight:500;margin-bottom:6px;color:var(--text)}
 .form-input{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;transition:border .15s}
 .form-input:focus{border-color:var(--primary)}
+.form-hint{font-size:12px;color:var(--text3);margin-top:6px}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
 .modal-footer{display:flex;justify-content:flex-end;gap:12px;padding:16px 24px;border-top:1px solid var(--border)}
@@ -615,12 +618,17 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
         </div>
         <div class="form-group">
           <label class="form-label">状态</label>
-          <select class="form-input" id="f-status">
+          <select class="form-input" id="f-status" onchange="syncCompletedField()">
             <option value="pending">待办</option>
             <option value="in-progress">进行中</option>
             <option value="completed">已完成</option>
           </select>
         </div>
+      </div>
+      <div class="form-group" id="f-completed-group" style="display:none">
+        <label class="form-label">完成日期</label>
+        <input type="date" class="form-input" id="f-completed-date">
+        <div class="form-hint" id="f-completed-hint"></div>
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -741,6 +749,30 @@ function relativeDate(s){
 function fmtTime(t){
   if(!t) return '';
   return t;
+}
+// 任务完成日期：优先用实际完成时间戳，老数据回退到任务日期
+function formatCompletedAt(t){
+  if(!t) return '';
+  if(t.completedAt){
+    const d = new Date(t.completedAt);
+    if(!isNaN(d.getTime())){
+      const ds = dateStr(d);
+      const hm = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+      if(ds===todayStr()) return `今天 ${hm}`;
+      if(ds===dateStr(new Date(Date.now()-86400000))) return `昨天 ${hm}`;
+      const y = d.getFullYear()!==new Date().getFullYear() ? `${d.getFullYear()}年` : '';
+      return `${y}${d.getMonth()+1}月${d.getDate()}日 ${hm}`;
+    }
+  }
+  return t.date ? `${relativeDate(t.date)}（原定日）` : '未记录';
+}
+// 由「完成日期」输入值 + 原完成时间拼出时间戳（只改日期，保留原时分）
+function composeCompletedAt(dateVal, prevIso){
+  if(!dateVal) return prevIso || new Date().toISOString();
+  const parts = dateVal.split('-').map(Number);
+  const ref = prevIso ? new Date(prevIso) : new Date();
+  const d = new Date(parts[0], parts[1]-1, parts[2], ref.getHours(), ref.getMinutes(), ref.getSeconds());
+  return d.toISOString();
 }
 function escapeHtml(s){
   if(!s) return '';
@@ -1180,6 +1212,7 @@ function renderTasks(){
             <div>
               <div class="task-title">${escapeHtml(t.title)}</div>
               ${t.description ? `<div class="task-desc">${escapeHtml(t.description)}</div>` : ''}
+              ${isChecked ? `<div class="task-completed-at" title="任务完成日期"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>完成于 ${formatCompletedAt(t)}</div>` : ''}
             </div>
             <div><span class="badge badge-cat" style="background:${cat.color}">${cat.label}</span></div>
             <div><span class="badge badge-pri-${t.priority}">${pri.label}</span></div>
@@ -1524,6 +1557,23 @@ function render(){
 }
 
 /* ====== Modal ====== */
+// 完成日期字段：状态为已完成时显示（已完成任务显示实际完成日期，未完成的提示保存后自动记录）
+function syncCompletedField(){
+  const group = document.getElementById('f-completed-group');
+  const input = document.getElementById('f-completed-date');
+  const hint = document.getElementById('f-completed-hint');
+  if(!group || !input) return;
+  if(document.getElementById('f-status').value!=='completed'){ group.style.display = 'none'; return; }
+  group.style.display = 'block';
+  const t = state.editingId ? state.tasks.find(x=>x.id===state.editingId) : null;
+  if(t && t.completedAt){
+    input.value = dateStr(new Date(t.completedAt));
+    if(hint) hint.textContent = `实际完成于 ${formatCompletedAt(t)}`;
+  } else {
+    if(!input.value) input.value = todayStr();
+    if(hint) hint.textContent = '保存后自动记录完成时间，也可手动改成其他日期';
+  }
+}
 function openModal(taskId, defaultDate){
   state.editingId = taskId || null;
   const modal = document.getElementById('modalOverlay');
@@ -1555,6 +1605,7 @@ function openModal(taskId, defaultDate){
     document.getElementById('f-start').value = '';
     document.getElementById('f-end').value = '';
   }
+  syncCompletedField();
   modal.classList.add('active');
   setTimeout(()=>document.getElementById('f-title').focus(), 50);
 }
@@ -1578,6 +1629,7 @@ function saveTask(){
     startTime: document.getElementById('f-start').value,
     endTime: document.getElementById('f-end').value
   };
+  const completedDateVal = document.getElementById('f-completed-date') ? document.getElementById('f-completed-date').value : '';
 
   if(state.editingId){
     const t = state.tasks.find(x=>x.id===state.editingId);
@@ -1585,8 +1637,13 @@ function saveTask(){
       const wasCompleted = t.status==='completed';
       Object.assign(t, data);
       t.updatedAt = new Date().toISOString();
-      if(data.status==='completed' && !t.completedAt) t.completedAt = new Date().toISOString();
-      if(data.status!=='completed') t.completedAt = null;
+      if(data.status==='completed'){
+        // 完成日期未改动则保留原完成时间；改动过则只替换年月日，保留原时分
+        if(!t.completedAt) t.completedAt = composeCompletedAt(completedDateVal, null);
+        else if(completedDateVal && dateStr(new Date(t.completedAt))!==completedDateVal) t.completedAt = composeCompletedAt(completedDateVal, t.completedAt);
+      } else {
+        t.completedAt = null;
+      }
       if(data.status==='completed' && !wasCompleted){ onTaskCompleted(); }
     }
     showToast('任务已更新');
@@ -1597,7 +1654,7 @@ function saveTask(){
       ...data,
       createdAt: now,
       updatedAt: now,
-      completedAt: data.status==='completed' ? now : null
+      completedAt: data.status==='completed' ? composeCompletedAt(completedDateVal, null) : null
     });
     if(data.status==='completed') onTaskCompleted({noCheer:true});
     cuteToastsForCreate(data.category).forEach(showCuteToast);
