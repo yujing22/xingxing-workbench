@@ -686,6 +686,17 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
               u.searchParams.set('sharecode', sc);
               input = u.toString();
             }
+            /* 平台网关会注入伪造的 Authorization 头，云后端会当成无效会话。
+               把 SDK 的真实令牌挪到自定义头（网关不动自定义头），中转端再映射回去 */
+            if(init && init.headers){
+              var h = new Headers(init.headers);
+              var auth = h.get('authorization');
+              if(auth){
+                h.set('x-wb-session-token', auth);
+                h.delete('authorization');
+                init.headers = h;
+              }
+            }
           }
         }catch(e){}
         return orig.call(this, input, init);

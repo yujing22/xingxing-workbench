@@ -305,8 +305,15 @@ function relayCloud(req, res) {
   const sub = (req.url || '').slice(RELAY_PREFIX.length);
   if (!sub.startsWith('/.cloud/')) { send(res, 404, { error: 'not found' }); return; }
   const headers = Object.assign({}, req.headers);
-  // 剥掉会暴露浏览器来源 / 干扰上游的逐跳头
+  // 剥掉会暴露浏览器来源 / 干扰上游的头：
+  //  - origin/referer：云后端做来源白名单校验，带沙箱域名会被拒
+  //  - authorization：平台网关会注入伪造的值，云后端当成无效会话（invalid_grant）
+  //    真实令牌由前端挪到 x-wb-session-token，这里映射回 authorization
   ['host', 'origin', 'referer', 'cookie', 'connection', 'x-forwarded-for', 'x-forwarded-proto', 'x-forwarded-host', 'accept-encoding'].forEach(h => delete headers[h]);
+  const realToken = headers['x-wb-session-token'];
+  delete headers['authorization'];
+  delete headers['x-wb-session-token'];
+  if (realToken) headers['authorization'] = realToken;
   const opts = {
     hostname: CLOUD_HOST,
     port: 443,

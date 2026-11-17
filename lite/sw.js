@@ -1,5 +1,5 @@
 /* 星星工作台 - 离线缓存 Service Worker */
-const CACHE = 'xingxing-workbench-lite-v16';
+const CACHE = 'xingxing-workbench-lite-v17';
 /* SW 脚本 URL 带 sharecode（注册时附加），取出来给所有同源请求补上——
    发布网关对每个请求的 URL 都校验 sharecode，缺了会 403「链接不完整」 */
 const SC = new URLSearchParams(self.location.search).get('sharecode') || '';
