@@ -315,8 +315,11 @@ function serveStatic(req, res, urlPath) {
   let name = decodeURIComponent(urlPath.split('?')[0]);
   if (name === '/' || name === '') name = 'index.html';
   name = name.replace(/^\/+/, '');
-  if (!STATIC_WHITELIST.has(name)) { send(res, 404, { error: 'not found' }); return; }
-  const file = path.join(DIR, name);
+  /* lite/ 子目录（简洁版）：白名单同根目录，仅限一层 */
+  let liteSub = '';
+  if (name.startsWith('lite/')) { liteSub = 'lite/'; name = name.slice(5); }
+  if (name.includes('/') || !STATIC_WHITELIST.has(name)) { send(res, 404, { error: 'not found' }); return; }
+  const file = path.join(DIR, liteSub ? path.join('lite', name) : name);
   fs.readFile(file, (err, buf) => {
     if (err) { send(res, 404, { error: 'not found' }); return; }
     res.writeHead(200, {
