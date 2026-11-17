@@ -663,6 +663,37 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
 
 
 <!-- WorkBuddy 云服务 SDK（账号登录 + 云数据库） -->
+<script>
+/* 发布链接必需 sharecode：网关对每个请求的 URL 都校验它。
+   这里统一给「云中转请求 + PWA 资源」自动补上 sharecode，用户无感。 */
+(function(){
+  try{
+    var sc = new URLSearchParams(location.search).get('sharecode');
+    if(!sc) return;
+    var q = encodeURIComponent(sc);
+    var m = document.querySelector('link[rel="manifest"]');
+    if(m) m.href = m.getAttribute('href') + '?sharecode=' + q;
+    var i = document.querySelector('link[rel="apple-touch-icon"]');
+    if(i) i.href = i.getAttribute('href') + '?sharecode=' + q;
+    var orig = window.fetch;
+    if(typeof orig === 'function'){
+      window.fetch = function(input, init){
+        try{
+          var url = typeof input === 'string' ? input : (input && input.url) || '';
+          if(url.indexOf('/api/crelay/') !== -1){
+            var u = new URL(url, location.origin);
+            if(!u.searchParams.has('sharecode')){
+              u.searchParams.set('sharecode', sc);
+              input = u.toString();
+            }
+          }
+        }catch(e){}
+        return orig.call(this, input, init);
+      };
+    }
+  }catch(e){}
+})();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@tencent-ai/workbuddy-cloud-sdk@dev/lib/index.global.js"></script>
 <script>
 /* ====== State & Constants ====== */
@@ -2286,7 +2317,8 @@ init();
 
 /* ====== PWA 离线缓存（仅 HTTPS 生效） ====== */
 if('serviceWorker' in navigator && location.protocol.startsWith('https')){
-  navigator.serviceWorker.register('sw.js').catch(()=>{});
+  var _sc = new URLSearchParams(location.search).get('sharecode');
+  navigator.serviceWorker.register('sw.js' + (_sc ? ('?sharecode=' + encodeURIComponent(_sc)) : '')).catch(()=>{});
 }
 </script>
 </body>
