@@ -1854,9 +1854,12 @@ function getCloud(){
   if(_cloudClient) return _cloudClient;
   const g = window.WorkBuddyCloud;
   if(!g || typeof g.createWorkBuddyCloud !== 'function') return null;
+  // 在 WorkBuddy 应用域名上（页面与云网关同源）走同源调用：网关会把 /.cloud/* 转发到云后端，
+  // 完全避开浏览器跨域预检；其它来源（如 GitHub Pages）保持直连
+  const sameHost = /(^|\.)workbuddy\.host$|(^|\.)workbuddy\.link$/.test(location.hostname);
   try{
     _cloudClient = g.createWorkBuddyCloud({
-      endpoint: CLOUD_ENDPOINT,
+      endpoint: sameHost ? undefined : CLOUD_ENDPOINT,
       publishableKey: CLOUD_PUBLISHABLE_KEY,
       oauthRelayBaseUrl: CLOUD_OAUTH_RELAY
     });
