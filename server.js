@@ -297,6 +297,35 @@ function noteAttempt(ip) {
   attempts.set(ip, rec);
 }
 
+/* ============================ 云服务中转 ============================ */
+const CLOUD_HOST = cfg.cloudHost || 'wbapp-fmv6301hwi203g1kvcozpm.app.workbuddy.host';
+const RELAY_PREFIX = '/api/crelay';
+
+function relayCloud(req, res) {
+  const sub = (req.url || '').slice(RELAY_PREFIX.length);
+  if (!sub.startsWith('/.cloud/')) { send(res, 404, { error: 'not found' }); return; }
+  const headers = Object.assign({}, req.headers);
+  // 剥掉会暴露浏览器来源 / 干扰上游的逐跳头
+  ['host', 'origin', 'referer', 'cookie', 'connection', 'x-forwarded-for', 'x-forwarded-proto', 'x-forwarded-host', 'accept-encoding'].forEach(h => delete headers[h]);
+  const opts = {
+    hostname: CLOUD_HOST,
+    port: 443,
+    path: sub,
+    method: req.method,
+    headers: Object.assign({ accept: 'application/json' }, headers)
+  };
+  const upstream = https.request(opts, (ur) => {
+    const h = Object.assign({}, ur.headers);
+    delete h['content-security-policy'];
+    delete h['x-frame-options'];
+    res.writeHead(ur.statusCode || 502, h);
+    ur.pipe(res);
+  });
+  upstream.on('error', (e) => { try { send(res, 502, { error: 'relay failed', message: String(e && e.message || e) }); } catch (_) {} });
+  req.pipe(upstream);
+  req.on('error', () => { try { upstream.destroy(); } catch (_) {} });
+}
+
 /* ============================ 静态资源 ============================ */
 const STATIC_WHITELIST = new Set([
   'index.html', 'manifest.json', 'sw.js', 'apple-touch-icon.png',
@@ -339,6 +368,14 @@ const server = http.createServer(async (req, res) => {
   const urlQuery = (req.url || '').split('?')[1] || '';
 
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
+
+  /* ---- 云服务中转：页面同源调 /api/crelay/.cloud/*，由服务端转发到云网关 ----
+     目的：浏览器发出的 POST 自带 Origin 头，云后端会做来源白名单校验并拒绝
+     非预留域名；服务端转发时剥掉 Origin/Referer 等头，即可正常通过。 */
+  if (urlPath.startsWith('/api/crelay/')) {
+    relayCloud(req, res);
+    return;
+  }
 
   if (!urlPath.startsWith('/api/')) { serveStatic(req, res, urlPath); return; }
 

@@ -1755,12 +1755,13 @@ function getCloud(){
   if(_cloudClient) return _cloudClient;
   const g = window.WorkBuddyCloud;
   if(!g || typeof g.createWorkBuddyCloud !== 'function') return null;
-  // 在 WorkBuddy 应用域名上（页面与云网关同源）走同源调用：网关会把 /.cloud/* 转发到云后端，
-  // 完全避开浏览器跨域预检；其它来源（如 GitHub Pages）保持直连
+  // 在 WorkBuddy 应用域名上走服务端中转（/api/crelay）：云后端会校验请求 Origin，
+  // 浏览器直连会被拒（请求 origin is not allowed），由 server.js 剥掉 Origin 转发即可；
+  // 其它来源（如 GitHub Pages）保持直连
   const sameHost = /(^|\.)workbuddy\.host$|(^|\.)workbuddy\.link$/.test(location.hostname);
   try{
     _cloudClient = g.createWorkBuddyCloud({
-      endpoint: sameHost ? undefined : CLOUD_ENDPOINT,
+      endpoint: sameHost ? (location.origin + '/api/crelay') : CLOUD_ENDPOINT,
       publishableKey: CLOUD_PUBLISHABLE_KEY,
       oauthRelayBaseUrl: CLOUD_OAUTH_RELAY
     });
