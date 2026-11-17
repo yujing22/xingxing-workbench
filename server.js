@@ -314,6 +314,7 @@ const MIME = {
 function serveStatic(req, res, urlPath) {
   let name = decodeURIComponent(urlPath.split('?')[0]);
   if (name === '/' || name === '') name = 'index.html';
+  if (name === '/lite' || name === '/lite/') name = '/lite/index.html';
   name = name.replace(/^\/+/, '');
   /* lite/ 子目录（简洁版）：白名单同根目录，仅限一层 */
   let liteSub = '';
